@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+weights/
+data/nlst/
+data/coca/
+# generated figures (regenerate with figures/generate_figures.py)
+figures/*.png
+figures/*.pdf

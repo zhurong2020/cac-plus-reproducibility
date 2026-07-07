@@ -1,0 +1,7 @@
+numpy>=1.24
+scipy>=1.10
+matplotlib>=3.7
+# optional, only needed to re-run scoring from raw CT images (not for the analyses):
+# pydicom>=2.4
+# nibabel>=5.1
+# scikit-image>=0.21

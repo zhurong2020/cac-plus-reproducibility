@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this reproducibility package, please cite the article below."
+title: "CAC Plus — reproducibility package"
+version: v2.5.2-repro
+license: Apache-2.0
+authors:
+  - family-names: Zhu
+    given-names: Rong
+  - family-names: Chen
+    given-names: Qizhi
+preferred-citation:
+  type: article
+  title: "CAC Plus: Open-source engineering toolkit for opportunistic AI coronary calcium screening across multi-format chest CT pipelines"
+  authors:
+    - family-names: Zhu
+      given-names: Rong
+    - family-names: Chen
+      given-names: Qizhi
+  journal: "Radiology: Artificial Intelligence"
+  year: 2026
+references:
+  - type: software
+    title: "AI-CAC (VA non-gated AI coronary calcium)"
+    authors:
+      - family-names: Hagopian
+        given-names: Raffi
+    notes: "Wrapped unchanged (MIT licence), release v1.0.0."

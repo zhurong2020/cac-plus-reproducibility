@@ -28,7 +28,10 @@ the comment header of each file.
 
 ```bash
 python analysis/paired_thin_thick.py      # §3.6  -> n=2224, r=0.974, ratio=0.934, kappa=0.639, RESCUE 327/2224 (14.70%)
-python analysis/coca_vs_reference.py       # §3.1  -> n=206, r=0.957, zero-CAC 52.4% vs 42.7% (reference)
+python analysis/coca_vs_reference.py --reference <your_coca_reference.csv>
+                                           # §3.1  -> n=206, r=0.957, zero-CAC 52.4% vs 42.7%
+                                           # (the expert reference is Stanford's, not redistributed
+                                           #  here -- see data/README.md)
 python benchmarks/speedup_realct.py        # §3.3  -> median 5.87x, 50/50 identical, per-stratum 2.00..16.57x
 python benchmarks/byte_identity_synthetic.py  # §3.2 -> 100/100 byte-identical (self-contained, no patient data)
 python figures/generate_figures.py         # Figures 4 & 5 from the paired table
@@ -39,7 +42,8 @@ python figures/generate_figures.py         # Figures 4 & 5 from the paired table
 | Script | Manuscript | Reproduces |
 |---|---|---|
 | `analysis/paired_thin_thick.py` | §3.6, Fig 4/5 | Pearson r, thick/thin ratio, Bland-Altman, Cohen κ, RESCUE rate |
-| `analysis/coca_vs_reference.py` | §3.1 | COCA non-gated AI-vs-expert correlation + zero-CAC rates |
+| `analysis/coca_vs_reference.py` | §3.1 | COCA non-gated AI-vs-expert correlation + zero-CAC rates (needs `--reference`, see `data/README.md`) |
+| `scripts/build_cohort_manifests.py` | §2.3 / Table 1 | Rebuilds the NLST and COCA cohort manifests; asserts the published denominators |
 | `benchmarks/speedup_realct.py` | §3.3, Fig 3b/c | real-CT speedup distribution + per-stratum medians |
 | `benchmarks/byte_identity_synthetic.py` | §3.2, Fig 3a | vectorised == naive Agatston (byte-identity) |
 | `figures/generate_figures.py` | Fig 4, Fig 5 | scatter + Bland-Altman; RESCUE heatmap + rate bars |

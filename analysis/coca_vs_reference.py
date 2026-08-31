@@ -2,25 +2,40 @@
 
 Expected: n = 206, Pearson r ~ 0.957, zero-CAC 52.4% (AI) vs 42.7% (reference).
 
-Why this script needs a file from you
-------------------------------------
-The COCA expert reference (per-vessel and total Agatston from Stanford's manual
-calcium annotations) is **part of the Stanford AIMI release, not our output**, so
-it is not redistributed here -- see `data/README.md`. Our own scores ship in
-`results_expected/coca_cohort_manifest.csv`; you supply the reference from your
-own COCA download and this script joins the two.
+Why this script ships no COCA data
+----------------------------------
+The Stanford University School of Medicine COCA Research Use Agreement grants
+"personal, non-commercial research" use only and states:
+
+    YOU MAY NOT DISTRIBUTE, PUBLISH, OR REPRODUCE A COPY of any portion or all of
+    the COCA- Coronary Calcium and chest CT's Dataset to others without specific
+    prior written permission from the School of Medicine.
+
+There is no research or reproducibility exception, and the dataset page describes
+the non-gated release as "chest CT DICOM images *with coronary artery calcium
+scores*" -- so the expert scores are part of the Dataset rather than a derivative
+of it. Case identifiers and per-case header values are arguably "a portion" as
+well. This repository therefore publishes nothing COCA-derived: no case list, no
+reference values, no scores of ours.
+
+Reproducing §3.1 end to end costs nothing extra, because this repository ships the
+scoring engine itself:
+
+    1. Register for COCA and download the non-gated release from Stanford AIMI.
+    2. Score it with the CAC Plus engine (v2.5.2, the version pinned in the
+       manuscript) to obtain one Agatston score per case.
+    3. Build the expert reference from the annotations in your own download: one
+       row per case, `gt_total` = the sum of the per-vessel expert scores.
+    4. Run this script over your two files.
 
 Usage
 -----
-    python analysis/coca_vs_reference.py --reference /path/to/coca_reference.csv
+    python analysis/coca_vs_reference.py \\
+        --scores    /path/to/your_cac_plus_scores.csv \\
+        --reference /path/to/your_coca_reference.csv
 
-`--reference` must be a CSV with at least these two columns:
-
-    patient_id   COCA case id as distributed by AIMI, e.g. "1A", "100A"
-    gt_total     total Agatston from the case's expert annotation
-
-Build it from the annotation files in your COCA download; summing the per-vessel
-expert scores (LCA/LAD/LCX/RCA) per case reproduces `gt_total`.
+Both CSVs need a `patient_id` column holding the COCA case id ("1A", "100A", ...).
+`--scores` needs `agatston_score`; `--reference` needs `gt_total`.
 """
 from __future__ import annotations
 
@@ -31,64 +46,60 @@ from pathlib import Path
 
 import numpy as np
 
-SCORES = Path(__file__).resolve().parents[1] / "results_expected" / "coca_cohort_manifest.csv"
+EXPECTED_N = 206
+EXPECTED_R = 0.957
+EXPECTED_ZERO_AI = 52.4
+EXPECTED_ZERO_REF = 42.7
 
 
-def load_scores() -> dict[str, float]:
-    if not SCORES.exists():
-        sys.exit(f"FAIL: {SCORES.name} not found; run scripts/build_cohort_manifests.py")
-    out = {}
-    with SCORES.open(newline="", encoding="utf-8") as fh:
-        for row in csv.DictReader(fh):
-            try:
-                out[row["patient_id"].strip()] = float(row["agatston_score"])
-            except (ValueError, KeyError):
-                continue
-    return out
-
-
-def load_reference(path: Path) -> dict[str, float]:
+def load(path: Path, value_col: str) -> dict[str, float]:
     if not path.exists():
-        sys.exit(f"FAIL: reference file not found: {path}")
-    out = {}
+        sys.exit(f"FAIL: file not found: {path}")
+    out: dict[str, float] = {}
     with path.open(newline="", encoding="utf-8-sig") as fh:
         reader = csv.DictReader(fh)
-        for col in ("patient_id", "gt_total"):
+        for col in ("patient_id", value_col):
             if col not in (reader.fieldnames or []):
-                sys.exit(f"FAIL: reference file has no {col!r} column "
-                         f"(found: {reader.fieldnames})")
+                sys.exit(f"FAIL: {path.name} has no {col!r} column (found: {reader.fieldnames})")
         for row in reader:
             try:
-                out[row["patient_id"].strip()] = float(row["gt_total"])
+                out[row["patient_id"].strip()] = float(row[value_col])
             except (TypeError, ValueError):
                 continue
+    if not out:
+        sys.exit(f"FAIL: {path.name} yielded no usable rows")
     return out
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--scores", required=True, type=Path,
+                    help="your CAC Plus scores: patient_id + agatston_score")
     ap.add_argument("--reference", required=True, type=Path,
-                    help="CSV with patient_id + gt_total, built from your own COCA download")
+                    help="your COCA expert reference: patient_id + gt_total")
     a = ap.parse_args()
 
-    scores, reference = load_scores(), load_reference(a.reference)
+    scores = load(a.scores, "agatston_score")
+    reference = load(a.reference, "gt_total")
     shared = sorted(set(scores) & set(reference))
     if not shared:
-        sys.exit("FAIL: no overlapping patient_id between our scores and your reference file. "
-                 "COCA case ids look like '1A', '100A' -- check the id column format.")
+        sys.exit("FAIL: no overlapping patient_id between the two files. COCA case ids "
+                 "look like '1A', '100A' -- check the id column format.")
 
     ai = np.array([scores[p] for p in shared])
     gt = np.array([reference[p] for p in shared])
     r = float(np.corrcoef(ai, gt)[0, 1])
+    zero_ai = 100 * float((ai == 0).mean())
+    zero_gt = 100 * float((gt == 0).mean())
 
-    print(f"n matched (AI + reference): {len(shared)}   (manuscript reports 206)")
-    print(f"Pearson r (AI vs expert)  : {r:.3f}   (manuscript reports 0.957)")
-    print(f"zero-CAC by AI            : {int((ai == 0).sum())}/{len(ai)} = {100*(ai==0).mean():.1f}%")
-    print(f"zero-CAC by reference     : {int((gt == 0).sum())}/{len(gt)} = {100*(gt==0).mean():.1f}%")
-    if len(shared) != 206:
-        print(f"\nNote: matched {len(shared)} of the 206 cases the manuscript reports; "
-              f"the printed r is over the matched subset only.")
+    print(f"n matched                 : {len(shared):>6}      (manuscript: {EXPECTED_N})")
+    print(f"Pearson r (AI vs expert)  : {r:>6.3f}      (manuscript: {EXPECTED_R})")
+    print(f"zero-CAC by AI            : {zero_ai:>5.1f}%      (manuscript: {EXPECTED_ZERO_AI}%)")
+    print(f"zero-CAC by reference     : {zero_gt:>5.1f}%      (manuscript: {EXPECTED_ZERO_REF}%)")
+    if len(shared) != EXPECTED_N:
+        print(f"\nNote: matched {len(shared)} of {EXPECTED_N} cases; the figures above are over "
+              f"the matched subset only.")
 
 
 if __name__ == "__main__":

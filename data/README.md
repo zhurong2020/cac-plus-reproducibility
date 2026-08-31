@@ -39,7 +39,6 @@ weights/
 | File | Rows | Contents |
 |---|---|---|
 | `nlst_cohort_manifest.csv` | 4,455 | **cohort manifest** — one row per scored acquisition (2,231 thin + 2,224 thick) with `selected_series_uid`, study date, manufacturer, kernel, thickness, slice count, and our Agatston score |
-| `coca_cohort_manifest.csv` | 206 | **cohort manifest** — one row per scored COCA case with acquisition parameters and our Agatston score |
 | `nlst_v252_paired.csv` | 2,224 | per-patient thin & thick Agatston, risk, RESCUE flag |
 | `speedup_nlst_b3_50case.csv` | 50 | per-case vendor-naive vs CAC-Plus timings + byte-identity flag |
 | `byte_identity_synthetic.csv` | 100 | synthetic-CT byte-identity benchmark (vendor vs optimised score) |
@@ -57,13 +56,26 @@ subset re-downloadable from TCIA / NCI Imaging Data Commons. Regenerate both wit
 `python scripts/build_cohort_manifests.py`; it asserts the 2,231 / 2,224 / 206 denominators against
 the manuscript and refuses to write a manifest that disagrees with the paper.
 
-### What is deliberately not here: the COCA expert reference
+### What is deliberately not here: anything COCA-derived
 
-The COCA per-vessel and total expert Agatston annotations (`gt_total`) are **part of the Stanford AIMI
-release, not our output**. Stanford's Research Use Agreement governs redistribution of the dataset and
-we have not established that it permits republishing those annotations, so they are not shipped here —
-an earlier revision of this repository did include them, and that was corrected on 2026-08-31.
+This repository publishes **no COCA data of any kind** — no case list, no reference values, and none of
+our own scores for those cases. The Stanford University School of Medicine COCA Research Use Agreement
+grants "personal, non-commercial research" use only and states:
 
-`analysis/coca_vs_reference.py` therefore takes `--reference <csv>`: build it from your own COCA
-download (a CSV with `patient_id` and `gt_total`, i.e. the per-case sum of the expert per-vessel
-scores) and the script joins it to our scores in `coca_cohort_manifest.csv` to reproduce r = 0.957.
+> YOU MAY NOT DISTRIBUTE, PUBLISH, OR REPRODUCE A COPY of any portion or all of the COCA- Coronary
+> Calcium and chest CT's Dataset to others without specific prior written permission from the School
+> of Medicine.
+
+It carries no research or reproducibility exception. The dataset page describes the non-gated release
+as "chest CT DICOM images *with coronary artery calcium scores*", so the expert scores are the Dataset
+rather than a derivative of it; case identifiers and per-case header values are arguably "a portion"
+as well. Earlier revisions of this repository shipped the expert reference (until 2026-08-31) and then
+a COCA case manifest (briefly, the same day); both were withdrawn.
+
+**Reproducing §3.1 costs nothing extra**, because this repository ships the scoring engine itself:
+register for COCA, download the non-gated release, score it with CAC Plus v2.5.2, build the expert
+reference from the annotations in your own download, and run
+`analysis/coca_vs_reference.py --scores <yours> --reference <yours>`. The script prints the
+manuscript's expected values alongside yours.
+
+If Stanford grants written permission, restoring the case manifest is a one-commit change.

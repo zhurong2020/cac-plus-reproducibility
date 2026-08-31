@@ -16,8 +16,16 @@ What is deliberately NOT published
 * `data_source_path` / `inference_path` -- local filesystem paths.
 * `patient_age` / `patient_sex` -- empty for NLST (TCIA strips them) and not
   needed to reproduce anything.
-* COCA's expert reference (`gt_total` and the per-vessel `gt_*` columns) -- that
-  is Stanford's annotation data, not our derived output. See data/README.md.
+* Anything COCA-derived at all. The Stanford University School of Medicine COCA
+  Research Use Agreement grants only "personal, non-commercial research" use and
+  states: "YOU MAY NOT DISTRIBUTE, PUBLISH, OR REPRODUCE A COPY of any portion or
+  all of the ... Dataset to others without specific prior written permission from
+  the School of Medicine." It carries no research or reproducibility exception,
+  and the dataset page describes the non-gated release as "chest CT DICOM images
+  *with coronary artery calcium scores*" -- so the expert scores are the Dataset,
+  not a derivative of it. Case identifiers and per-case DICOM header values are
+  arguably "a portion" too. COCA therefore contributes nothing to this repository;
+  see data/README.md for how §3.1 is reproduced instead.
 
 This script runs against the private source tree (`ai-cac-research`); the CSVs it
 writes are the checked-in artefacts. Counts are asserted against the manuscript,
@@ -42,7 +50,8 @@ NLST_SOURCES = [
 ]
 # The v2.5.2 external re-baseline is the run the manuscript reports (§3.1);
 # it carries the acquisition metadata the GT-joined table dropped.
-COCA_SOURCE = SRC / "v252_external_rebaseline_20260706" / "external_v252_results.csv"
+# (No COCA source: nothing COCA-derived is published here -- see the module
+    #  docstring and data/README.md.)
 
 FIELDS = [
     "patient_id", "cohort", "reconstruction", "selected_series_uid", "study_date",
@@ -54,7 +63,7 @@ FIELDS = [
 # Manuscript denominators (Table 1 / §2.3 / §3.1). A mismatch means the source
 # data moved under us -- fail rather than publish a manifest that disagrees with
 # the paper.
-EXPECTED = {"nlst_thin": 2231, "nlst_thick": 2224, "coca": 206}
+EXPECTED = {"nlst_thin": 2231, "nlst_thick": 2224}
 
 
 def fail(msg: str) -> None:
@@ -111,42 +120,6 @@ def build_nlst() -> list[dict]:
     return rows
 
 
-def build_coca() -> list[dict]:
-    rows = []
-    for r in read(COCA_SOURCE):
-        if (r.get("cohort") or "").strip().lower() not in ("coca", "coca_nongated", "coca-nongated"):
-            continue
-        if r.get("status") != "success":
-            continue          # the single Z-coverage-guard skip of 207 attempted
-        pid = (r.get("patient_id") or "").strip()
-        rows.append({
-            "patient_id": pid,
-            "cohort": "COCA-nongated",
-            "reconstruction": "single",
-            # COCA ships one prepared volume per case, so the AIMI case id is
-            # the acquisition key; there is no series UID to give.
-            "selected_series_uid": "",
-            "study_date": "",
-            "manufacturer": r.get("manufacturer", ""),
-            "convolution_kernel": "",
-            "nominal_thickness_mm": r.get("nominal_thickness_mm", ""),
-            "actual_spacing_mm": r.get("input_spacing_z_mm", ""),
-            "num_slices": r.get("num_slices", ""),
-            "agatston_score": r.get("agatston_score", ""),
-            "risk_category": r.get("risk_category", ""),
-            "algorithm_version": r.get("algorithm_version", "2.5.2"),
-            "model_weights_md5": r.get("model_weights_md5", ""),
-        })
-    rows.sort(key=lambda d: d["patient_id"])
-    if len(rows) != EXPECTED["coca"]:
-        fail(f"COCA: manifest has {len(rows)} rows, manuscript reports {EXPECTED['coca']} scored")
-    for d in rows:
-        for banned in ("gt_total", "gt_LCA", "gt_LAD", "gt_LCX", "gt_RCA"):
-            if banned in d:
-                fail(f"COCA manifest must not carry Stanford's expert annotation column {banned!r}")
-    return rows
-
-
 def write(path: Path, rows: list[dict]) -> None:
     with path.open("w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=FIELDS, lineterminator="\n")
@@ -162,7 +135,6 @@ def write(path: Path, rows: list[dict]) -> None:
 def main() -> None:
     print("OK - wrote:")
     write(OUT / "nlst_cohort_manifest.csv", build_nlst())
-    write(OUT / "coca_cohort_manifest.csv", build_coca())
 
 
 if __name__ == "__main__":

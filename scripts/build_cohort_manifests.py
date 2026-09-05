@@ -38,6 +38,9 @@ import csv
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from risk_categories import RISK_ORDER, classify_cac_risk  # noqa: E402
+
 REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "results_expected"
 SRC = Path.home() / "projects" / "ai-cac-research" / "results"
@@ -108,7 +111,20 @@ def build_nlst() -> list[dict]:
                 "actual_spacing_mm": r.get("actual_spacing_mm", ""),
                 "num_slices": r.get("num_slices_reported", ""),
                 "agatston_score": r.get("agatston_score", ""),
-                "risk_category": r.get("risk_category", ""),
+                # Derived here, not copied. The upstream scoring CSV carries a
+                # FIVE-category label (None / Minimal <=10 / Mild <=100 / Moderate
+                # <=400 / Severe) from the production batch driver, which is a
+                # different scheme from the four categories the manuscript reports
+                # and uses different boundaries. Copying it verbatim, as this line
+                # did until 2026-09-05, published a column that no analysis in this
+                # package produces and that the paper never defines. Deriving it
+                # from the same function the analysis and figure scripts use means
+                # the manifest cannot disagree with them.
+                "risk_category": (
+                    classify_cac_risk(float(r["agatston_score"]))
+                    if r.get("agatston_score", "").strip() not in ("", "None")
+                    else ""
+                ),
                 "algorithm_version": r.get("algorithm_version", ""),
                 "model_weights_md5": r.get("model_weights_md5", ""),
             }
@@ -117,6 +133,15 @@ def build_nlst() -> list[dict]:
         n = sum(1 for d in rows if d["reconstruction"] == role)
         if n != EXPECTED[key]:
             fail(f"NLST {role}: manifest has {n} acquisitions, manuscript reports {EXPECTED[key]}")
+    # The published manifest may carry only the categories the manuscript defines.
+    # Until 2026-09-05 it carried a fifth, `Minimal`, inherited from the upstream
+    # scoring CSV -- a label the paper never mentions, on boundaries it does not use.
+    emitted = {d["risk_category"] for d in rows if d["risk_category"]}
+    if not emitted <= set(RISK_ORDER):
+        fail(f"manifest carries risk categories the manuscript does not define: "
+             f"{sorted(emitted - set(RISK_ORDER))}. The published categories are "
+             f"{RISK_ORDER}; a fifth label means the column was copied from an upstream "
+             f"file instead of derived with classify_cac_risk().")
     return rows
 
 

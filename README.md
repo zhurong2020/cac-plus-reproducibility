@@ -48,7 +48,25 @@ python figures/generate_figures.py         # Figures 4 & 5 from the paired table
 | `benchmarks/byte_identity_synthetic.py` | §3.2, Fig 3a | vectorised == naive Agatston (byte-identity) |
 | `figures/generate_figures.py` | Fig 4, Fig 5 | scatter + Bland-Altman; RESCUE heatmap + rate bars |
 | `src/agatston_vectorised.py` / `agatston_vendor_ref.py` | Table 2 row 2 | the two Agatston implementations proven identical |
-| `src/risk_categories.py` | Methods / legends | None / Mild / Moderate / Severe thresholds |
+| `src/risk_categories.py` | Methods / legends | None / Mild / Moderate / Severe thresholds — the single definition; `build_cohort_manifests.py` now derives the manifest's `risk_category` column from it rather than copying an upstream label |
+
+### 2026-09-05 — three corrections, so that running this package reproduces the paper
+
+1. `analysis/paired_thin_thick.py` computed the aggregate thick-to-thin ratio over patients
+   non-zero on **both** reconstructions and printed **0.934**, while the manuscript reports
+   **0.929** over *all* 2,224 paired patients. 0.934 is a value an upstream audit identified as an
+   inadvertent denominator switch and retired on 2026-07-12; this script had kept it, and its
+   docstring listed it as the expected result. Restricting to both-non-zero also drops the
+   thick-slice zeros that are the RESCUE phenomenon the paper is about. Fixed to all-pairs.
+2. Every printed quantity in that script — n, r, ratio, Bland-Altman mean and limits, agreement,
+   κ, RESCUE count, **and the full 4×4 reclassification matrix** — is now asserted against the
+   published value, so the script fails instead of reporting a number that disagrees with the
+   paper. An expected value written only in a docstring is not a check.
+3. `results_expected/nlst_cohort_manifest.csv` carried a **five**-category `risk_category`
+   column (`None / Minimal ≤10 / Mild ≤100 / Moderate ≤400 / Severe`) copied verbatim from the
+   upstream scoring CSV — a scheme this paper never defines, on boundaries it does not use, and
+   one that `src/risk_categories.py` was never asked to produce. The column is now derived with
+   `classify_cac_risk()`, and the builder fails if a category outside `RISK_ORDER` ever appears.
 
 ## Data
 

@@ -3,11 +3,11 @@
 
 Why a manifest at all
 ---------------------
-`nlst_v252_paired.csv` is a *results* table: it is keyed by NLST `patient_id` and
-says what we scored, not which acquisition we scored. That is enough within this
-cohort (2,231 thin scans map 1:1 onto 2,231 distinct SeriesInstanceUIDs), but NLST
-is a three-round annual screening trial, so a reader holding only a participant ID
-cannot tell which screening round or which reconstruction produced our numbers.
+A results table keyed by NLST `patient_id` says what we scored, not which
+acquisition we scored. That is enough within this cohort (2,231 thin scans map
+1:1 onto 2,231 distinct SeriesInstanceUIDs), but NLST is a three-round annual
+screening trial, so a reader holding only a participant ID cannot tell which
+screening round or which reconstruction produced our numbers.
 The manifest adds `selected_series_uid` and the acquisition parameters, which is
 what makes the subset re-downloadable from TCIA / NCI Imaging Data Commons.
 

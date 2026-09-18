@@ -32,7 +32,7 @@ changes of target journal. None of the drift was catchable by a test, which is w
 
 ### Added
 
-- **`analysis/agreement_panel.py`** — §3.7, the manuscript's headline result, which this
+- **`analysis/agreement_panel.py`** — §3.1 and §3.7, the manuscript's headline result, which this
   package previously had no script for at all: the vendor arm was run after the package was
   last touched. Reports association and agreement side by side, because correlation is not
   agreement and the gap on this cohort is large (Pearson r 0.957 against Lin's CCC 0.856 and
@@ -54,6 +54,10 @@ changes of target journal. None of the drift was catchable by a test, which is w
 
 ### Removed
 
+- `analysis/coca_vs_reference.py`, folded into `analysis/agreement_panel.py`. Two scripts
+  both reading the reader's COCA download and both reporting r was an invitation to update
+  one and not the other; the panel now carries §3.1's zero-CAC rates alongside §3.7's
+  agreement measures, and reproduces both (52.4% vs 42.7%; CCC 0.856).
 - `analysis/paired_thin_thick.py`, `figures/generate_figures.py` and Figures 4–5 — the thin-
   versus-thick RESCUE analysis of the former §3.6, cut from the manuscript in the CMPB
   restructure. That work continues in a companion paper; reproducing an analysis this paper

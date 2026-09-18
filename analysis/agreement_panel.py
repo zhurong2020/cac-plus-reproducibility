@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""§3.7: agreement against the COCA expert reference, for any scoring arm.
+"""§3.1 and §3.7: agreement against the COCA expert reference, for any scoring arm.
 
 The manuscript's headline result. Correlation is deliberately *not* the headline
 here: it measures association, is inflated by a wide dynamic range, and is blind
@@ -175,6 +175,12 @@ def main() -> int:
     sens = 100 * ((g > 0) & (x > 0)).sum() / max((g > 0).sum(), 1)
     spec = 100 * ((g == 0) & (x == 0)).sum() / max((g == 0).sum(), 1)
     print(f"  CAC>0 sensitivity / spec.    {sens:6.1f}% / {spec:.1f}%")
+    # Section 3.1's separate claim: the automated zero rate exceeds the expert's,
+    # which is the low-burden sensitivity gap stated there and referred back to
+    # from 3.7. Published for COCA non-gated: 52.4% scored vs 42.7% reference.
+    print(f"  Zero-CAC rate, scored        {100 * (x == 0).mean():6.1f}%"
+          f"   (\u00a73.1)")
+    print(f"  Zero-CAC rate, reference     {100 * (g == 0).mean():6.1f}%")
     missed = [i for i in ids if reference[i] > 0 and scores[i] == 0]
     if missed:
         burden = np.array([reference[i] for i in missed])

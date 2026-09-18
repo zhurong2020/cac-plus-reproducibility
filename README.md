@@ -34,6 +34,7 @@ python benchmarks/speedup_realct.py              # C2  -> median 1.97x real-CT, 
 
 # Needs your own COCA download, both files (see data/README.md).
 python analysis/agreement_panel.py --scores yours.csv --reference your_coca_gt.csv
+                                                 # 3.1 -> zero-CAC 52.4% scored vs 42.7% reference
                                                  # 3.7 -> CCC 0.856, ICC 0.857, kappa 0.734,
                                                  #        CAC>0 sensitivity 72.0%
 ```
@@ -45,7 +46,7 @@ python analysis/agreement_panel.py --scores yours.csv --reference your_coca_gt.c
 | `benchmarks/byte_identity_synthetic.py` | §3.2 (C1), Fig 3a | vectorised == vendor-reference Agatston, byte for byte |
 | `benchmarks/speedup_realct.py` | §3.3 (C2), Fig 3b/c | real-CT speedup distribution + per-stratum medians |
 | `analysis/spacing_audit.py` | §3.6 (C5) | the `ImagePositionPatient` overlap-reconstruction audit |
-| `analysis/agreement_panel.py` | **§3.7** | agreement against the COCA expert reference, either arm |
+| `analysis/agreement_panel.py` | §3.1, **§3.7** | zero-CAC rates; agreement against the COCA expert reference, either arm |
 | `scripts/build_cohort_manifests.py` | §2.3 / Table 1 | the NLST manifest; asserts the published denominator |
 | `src/agatston_vectorised.py`, `src/agatston_vendor_ref.py` | Table 2 | the two Agatston implementations proven identical |
 | `src/risk_categories.py` | §2.4 | the SCCT four strata — the single definition used everywhere |
@@ -60,7 +61,7 @@ multi-format identity) needs the three-format input pipeline from the deployment
 §3.5 (C4) is a retrospective audit of our own deployment incident records, which the
 manuscript labels non-independent for that reason.
 
-## Why §3.7 needs two files from you
+## Why the COCA analysis needs two files from you
 
 Nothing COCA-derived ships here. Stanford's Research Use Agreement for the AIMI datasets
 grants use "for personal, non-commercial research purposes only" and states that **"YOU MAY

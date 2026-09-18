@@ -27,7 +27,7 @@ python benchmarks/byte_identity_synthetic.py     # C1  -> 100/100 byte-identical
 
 # From the shipped result tables — no images needed.
 python analysis/spacing_audit.py                 # C5  -> 274 at ratio exactly 2.0 (266 SIEMENS + 8 GE)
-python scripts/build_cohort_manifests.py         # Table 1 -> asserts n = 2,231
+python scripts/verify_cohort_manifest.py         # Table 1 -> asserts n = 2,231
 
 # Needs the NLST images (see data/README.md).
 python benchmarks/speedup_realct.py              # C2  -> median 1.97x real-CT, 50/50 identical
@@ -47,7 +47,8 @@ python analysis/agreement_panel.py --scores yours.csv --reference your_coca_gt.c
 | `benchmarks/speedup_realct.py` | §3.3 (C2), Fig 3b/c | real-CT speedup distribution + per-stratum medians |
 | `analysis/spacing_audit.py` | §3.6 (C5) | the `ImagePositionPatient` overlap-reconstruction audit |
 | `analysis/agreement_panel.py` | §3.1, **§3.7** | zero-CAC rates; agreement against the COCA expert reference, either arm |
-| `scripts/build_cohort_manifests.py` | §2.3 / Table 1 | the NLST manifest; asserts the published denominator |
+| `scripts/verify_cohort_manifest.py` | §2.3 / Table 1 | checks the shipped manifest: denominator, one row per series UID, no leak |
+| `scripts/build_cohort_manifests.py` | — | **maintainer only**; rebuilds the manifest from private source tables, so neither CI nor a reader can run it |
 | `src/agatston_vectorised.py`, `src/agatston_vendor_ref.py` | Table 2 | the two Agatston implementations proven identical |
 | `src/risk_categories.py` | §2.4 | the SCCT four strata — the single definition used everywhere |
 

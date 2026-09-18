@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Build the per-acquisition cohort manifests shipped in results_expected/.
 
+Requires the private source tables in `ai-cac-research`, so this is a maintainer
+script and CI cannot run it. What CI runs instead is
+`scripts/verify_cohort_manifest.py`, which checks the shipped artefact using
+nothing but this repository.
+
 Why a manifest at all
 ---------------------
 A results table keyed by NLST `patient_id` says what we scored, not which
@@ -164,11 +169,16 @@ def write(path: Path, rows: list[dict]) -> None:
         if leak in blob:
             fail(f"{path.name} leaks a local filesystem path ({leak!r})")
     print(f"  {path.name}: {len(rows)} rows")
+    sys.stdout.flush()
 
 
 def main() -> None:
-    print("OK - wrote:")
+    # Build first, announce afterwards. This printed "OK - wrote:" before doing
+    # any work, so a run that failed on a missing source table still had "OK" in
+    # its output -- and in CI, where stdout is block-buffered and the exit
+    # message goes to stderr, the OK appeared *after* the FAIL.
     write(OUT / "nlst_cohort_manifest.csv", build_nlst())
+    print("OK - manifest written and verified against the manuscript.")
 
 
 if __name__ == "__main__":

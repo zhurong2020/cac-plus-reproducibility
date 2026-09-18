@@ -48,8 +48,7 @@ SRC = Path.home() / "projects" / "ai-cac-research" / "results"
 NLST_SOURCES = [
     ("thin", SRC / "v252_nlst_full_20260621" / "NLST_thin_results.csv"),
     ("thin", SRC / "v252_nlst_full_20260621" / "NLST_batch3_thin_results.csv"),
-    ("thick", SRC / "v252_nlst_full_20260621" / "NLST_thick_results.csv"),
-    ("thick", SRC / "v252_nlst_full_20260621" / "NLST_batch3_thick_results.csv"),
+    # The thick-slice sources are deliberately not read: see RECONSTRUCTIONS below.
 ]
 # The v2.5.2 external re-baseline is the run the manuscript reports (§3.1);
 # it carries the acquisition metadata the GT-joined table dropped.
@@ -66,7 +65,13 @@ FIELDS = [
 # Manuscript denominators (Table 1 / §2.3 / §3.1). A mismatch means the source
 # data moved under us -- fail rather than publish a manifest that disagrees with
 # the paper.
-EXPECTED = {"nlst_thin": 2231, "nlst_thick": 2224}
+# The CMPB manuscript's cohort is 2,231 NLST thin-slice acquisitions plus 206
+# COCA (Table 1); the paired thick-slice arm belonged to the former §3.6, which
+# the CMPB restructure removed. Emitting it here would ship a manifest broader
+# than the paper it accompanies -- the same drift that left Figures 4-5 in the
+# package after the section they illustrated was cut.
+RECONSTRUCTIONS = ("thin",)
+EXPECTED = {"nlst_thin": 2231}
 
 
 def fail(msg: str) -> None:
@@ -129,10 +134,14 @@ def build_nlst() -> list[dict]:
                 "model_weights_md5": r.get("model_weights_md5", ""),
             }
     rows = sorted(by_uid.values(), key=lambda d: (d["reconstruction"], int(d["patient_id"])))
-    for role, key in (("thin", "nlst_thin"), ("thick", "nlst_thick")):
+    for role in RECONSTRUCTIONS:
         n = sum(1 for d in rows if d["reconstruction"] == role)
-        if n != EXPECTED[key]:
-            fail(f"NLST {role}: manifest has {n} acquisitions, manuscript reports {EXPECTED[key]}")
+        if n != EXPECTED[f"nlst_{role}"]:
+            fail(f"NLST {role}: manifest has {n} acquisitions, "
+                 f"manuscript reports {EXPECTED[f'nlst_{role}']}")
+    stray = {d["reconstruction"] for d in rows} - set(RECONSTRUCTIONS)
+    if stray:
+        fail(f"manifest carries reconstructions the manuscript does not describe: {sorted(stray)}")
     # The published manifest may carry only the categories the manuscript defines.
     # Until 2026-09-05 it carried a fifth, `Minimal`, inherited from the upstream
     # scoring CSV -- a label the paper never mentions, on boundaries it does not use.

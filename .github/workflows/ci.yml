@@ -1,0 +1,58 @@
+name: reproducibility checks
+
+# The two checks that need no data run on every push. That is the whole point of
+# keeping byte_identity_synthetic.py self-contained: the manuscript's central
+# claim -- that the optimised Agatston path is byte-identical to the vendor
+# reference -- is verifiable by anyone, including CI, with no cohort access.
+on:
+  push:
+  pull_request:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -r requirements.txt
+
+      - name: C1 — byte-identical Agatston (no data required)
+        run: python benchmarks/byte_identity_synthetic.py
+
+      - name: C5 — axial-spacing audit from the shipped manifest
+        run: python analysis/spacing_audit.py
+
+      - name: Table 1 — cohort manifest denominators
+        run: python scripts/build_cohort_manifests.py
+
+      - name: Nothing COCA-derived is committed
+        run: |
+          set -eo pipefail
+          # The Stanford RUA forbids publishing any portion of the Dataset, and
+          # Stanford describes the expert scores as part of it. Grep is a blunt
+          # check, but the failure it guards against is not reversible once pushed.
+          if git ls-files | grep -iE '(^|/)[^/]*coca[^/]*\.(csv|xlsx|json)$'; then
+            echo "::error::a COCA-derived data file is tracked"; exit 1
+          fi
+          if git grep -lE '\bgt_(total|LCA|LAD|LCX|RCA)\b' -- '*.csv' >/dev/null 2>&1; then
+            echo "::error::a tracked CSV carries COCA expert-score columns"; exit 1
+          fi
+          echo "clean"
+
+      - name: No patient identifiers in shipped tables
+        run: |
+          set -eo pipefail
+          if git grep -nE 'dicom_[0-9]{6,}' -- results_expected >/dev/null 2>&1; then
+            echo "::error::internal case identifiers in results_expected"; exit 1
+          fi
+          echo "clean"

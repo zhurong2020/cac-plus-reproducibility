@@ -48,7 +48,7 @@ fi
 #      or pipe, which a CSV header row has and Chinese prose does not (prose
 #      uses the ideographic comma 、). The ASCII column names stay unconditional.
 # ---------------------------------------------------------------------------
-PATTERN='gt_total|gt_LCA|gt_LAD|gt_LCX|gt_RCA|dicom_[0-9]{7,8}\b|patientingroupid\s*[:=]\s*["\x27]?[0-9]+|patient_in_group_id\s*[:=]\s*["\x27]?[0-9]+|<researcher-1>|<researcher-2>|<handle>|身份证|\b[0-9]{17}[0-9Xx]\b|AKIA[0-9A-Z]{16}|sk_live_[A-Za-z0-9]{24,}|password\s*=\s*["\x27][^"\x27]{8,}|/home/[a-z][a-z0-9_-]*/|/Users/[a-z][a-z0-9_-]*/|patient_name_chinese|patient_name_pinyin|[,\t|]\s*(患者姓名|病人姓名)\s*[,\t|]'
+PATTERN='dicom_[0-9]{7,8}\b|patientingroupid\s*[:=]\s*["\x27]?[0-9]+|patient_in_group_id\s*[:=]\s*["\x27]?[0-9]+|<researcher-1>|<researcher-2>|<handle>|身份证|\b[0-9]{17}[0-9Xx]\b|AKIA[0-9A-Z]{16}|sk_live_[A-Za-z0-9]{24,}|password\s*=\s*["\x27][^"\x27]{8,}|/home/[a-z][a-z0-9_-]*/|/Users/[a-z][a-z0-9_-]*/|patient_name_chinese|patient_name_pinyin|[,\t|]\s*(患者姓名|病人姓名)\s*[,\t|]'
 
 # Group 7 — PROJECT-SPECIFIC: this repository is the one that goes PUBLIC.
 # Everything below is here because it was actually found in this repo on
@@ -118,6 +118,37 @@ if (( ${#staged[@]} == 0 )); then
 fi
 
 hits=$(git grep --cached -nE "$PATTERN" -- "${staged[@]}" 2>/dev/null || true)
+
+# ---------------------------------------------------------------------------
+# COCA expert-score columns — DATA FILES ONLY.
+#
+# Stanford's Research Use Agreement for the AIMI datasets forbids publishing
+# "any portion" of the Dataset, and Stanford describes the expert calcium scores
+# as part of the Dataset rather than a derivative of it. A committed CSV carrying
+# gt_total (or the per-vessel gt_* columns) would therefore be a redistribution.
+#
+# Scoped to data extensions on purpose. These names appear legitimately in source
+# and prose -- analysis/agreement_panel.py takes `--reference-column gt_total`
+# precisely because the user supplies that file from their own download, and this
+# hook's first version blocked its own documentation. A pattern that fires on the
+# control describing it teaches people to bypass the hook.
+# ---------------------------------------------------------------------------
+mapfile -t staged_data < <(printf '%s\n' "${staged[@]}" | grep -iE '\.(csv|tsv|json|xlsx|parquet)$' || true)
+if (( ${#staged_data[@]} > 0 )); then
+    coca_hits=$(git grep --cached -nE '\bgt_(total|LCA|LAD|LCX|RCA)\b' -- "${staged_data[@]}" 2>/dev/null || true)
+    if [[ -n "$coca_hits" ]]; then
+        echo "============================================================" >&2
+        echo "ERROR: pre-commit blocked — COCA expert scores in a data file" >&2
+        echo "============================================================" >&2
+        echo "$coca_hits" >&2
+        echo >&2
+        echo "Stanford's Research Use Agreement forbids publishing any portion of" >&2
+        echo "the Dataset, and the expert scores are part of it. Nothing" >&2
+        echo "COCA-derived belongs in this repository; analysis scripts take the" >&2
+        echo "reference file as an argument from the reader's own download." >&2
+        exit 1
+    fi
+fi
 
 if [[ -n "$hits" ]]; then
     cat >&2 <<EOF

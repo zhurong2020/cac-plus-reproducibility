@@ -54,7 +54,7 @@ def main(n_cases=100):
     print(f"Byte-identity : {matches}/{n_cases} identical")
     assert matches == n_cases, "vectorised and naive Agatston diverged"
     print("OK — the vectorised optimisation preserves the Agatston score exactly.")
-    print("Note: the C2 speedup *magnitude* (median 2.87x synthetic / 5.87x real CT) grows")
+    print("Note: the C2 speedup *magnitude* (median 2.87x synthetic / 1.97x real CT) grows")
     print("with lesion voxel count and is reproduced in benchmarks/speedup_realct.py; on")
     print("these tiny synthetic blobs the two implementations run in comparable time.")
 

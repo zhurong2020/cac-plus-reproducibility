@@ -39,7 +39,6 @@ weights/
 | File | Rows | Contents |
 |---|---|---|
 | `nlst_cohort_manifest.csv` | 4,455 | **cohort manifest** — one row per scored acquisition (2,231 thin + 2,224 thick) with `selected_series_uid`, study date, manufacturer, kernel, thickness, slice count, and our Agatston score |
-| `nlst_v252_paired.csv` | 2,224 | per-patient thin & thick Agatston, risk, RESCUE flag |
 | `speedup_nlst_b3_50case.csv` | 50 | per-case vendor-naive vs CAC-Plus timings + byte-identity flag |
 | `byte_identity_synthetic.csv` | 100 | synthetic-CT byte-identity benchmark (vendor vs optimised score) |
 
@@ -49,7 +48,7 @@ and no local filesystem paths — the manifest builder fails if one appears.
 
 ### Why a manifest as well as a results table
 
-`nlst_v252_paired.csv` says *what we measured*; the manifest says *what we measured it on*. NLST is a
+The manifest says *what we measured on*: NLST is a
 three-round annual screening trial, so a participant id alone does not identify which screening round
 or which reconstruction produced a number. `selected_series_uid` does, which is what makes this exact
 subset re-downloadable from TCIA / NCI Imaging Data Commons. Regenerate both with

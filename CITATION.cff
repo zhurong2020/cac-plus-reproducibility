@@ -10,14 +10,15 @@ authors:
     given-names: Qizhi
 preferred-citation:
   type: article
-  title: "CAC Plus: Open-source engineering toolkit for opportunistic AI coronary calcium screening across multi-format chest CT pipelines"
+  title: "CAC Plus: An open-source calcium-scoring engine for opportunistic coronary artery calcium quantification on non-gated multi-format chest CT"
   authors:
     - family-names: Zhu
       given-names: Rong
     - family-names: Chen
       given-names: Qizhi
-  journal: "Radiology: Artificial Intelligence"
+  journal: "Computer Methods and Programs in Biomedicine"
   year: 2026
+  notes: "Submitted. Radiology: Artificial Intelligence (declined 2026-07-09) and Korean Journal of Radiology (declined 2026-09-15) appear in this file's history, not in its current state."
 references:
   - type: software
     title: "AI-CAC (VA non-gated AI coronary calcium)"

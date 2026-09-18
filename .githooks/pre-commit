@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+# pre-commit: block PHI / PII / credential / cardiac-specific patterns from
+# sneaking into commits.
+#
+# Templated from cardiac-shared/.githooks/pre-commit (cardiac-baseline).
+#
+# Origin: the cardiac repos are PRIVATE GitHub repos under active patent
+# applications (P2 RESCUE, P3 vbca, P4 ZeroCAC). Even on a private repo,
+# leaking PHI / patient identifiers into git history creates a permanent
+# liability — history rewrites are expensive and incomplete (mirrors / forks
+# / GitHub caches retain old refs). This hook is the cheap layer of defense.
+#
+# Setup (one-time per clone):
+#     git config core.hooksPath .githooks
+#
+# Bypass once for a legitimate reference (e.g. documenting the cleanup itself):
+#     CARDIAC_ALLOW_PII=1 git commit ...
+
+set -eu
+
+if [[ "${CARDIAC_ALLOW_PII:-0}" == "1" ]]; then
+    exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# Pattern groups. Groups 1-6 are the WORKSPACE-WIDE baseline (safe to keep
+# as-is across every cardiac repo). Group 7 is PROJECT-SPECIFIC — REVIEW AND
+# EDIT IT before relying on this hook in a new repo (see the Don't-do note in
+# cardiac-shared/POST_BASELINE_TODO.md: each cardiac project has slightly
+# different identifier conventions — vbca has `numeric_id` columns,
+# ai-cac-research has `dicom_*` folder layouts, cardiac-ai-cac has `series_uid`
+# examples in test fixtures).
+#   1. DICOM patient-folder layout: dicom_NNNNNNN, dicom_NNNNNNNN (7-8 digits)
+#   2. Patient-ID column names from Dr. Chen's clinical databases
+#   3. Real names tied to this workspace: <researcher-1> / <researcher-2> / <handle>
+#   4. Chinese national ID (身份证) — literal label or 18-digit shape
+#   5. Bare credential shapes (AWS AKIA, Stripe sk_live_, password=...)
+#   6. Username-leaking absolute paths: /home/<user>/ or /Users/<user>/
+#   9. Patient-name COLUMN HEADERS (added 2026-09-11). A file naming such a
+#      column is almost always carrying the column's contents. Found because
+#      25 tracked CSVs already do: patient_database_735_with_extended.csv holds
+#      719 unique real names in `patient_name_chinese`, and groups 1-6 let every
+#      one of them through. Scripts that legitimately *drop* the column will trip
+#      this — allowlist that path, do not weaken the pattern.
+#      Tightened 2026-09-11 on first real use: the bare Chinese terms matched
+#      ordinary policy prose ("患者姓名、PatientID…不得写入Git文档" — the rule
+#      itself, not a leak). They now require an adjacent half-width comma, tab
+#      or pipe, which a CSV header row has and Chinese prose does not (prose
+#      uses the ideographic comma 、). The ASCII column names stay unconditional.
+# ---------------------------------------------------------------------------
+PATTERN='gt_total|gt_LCA|gt_LAD|gt_LCX|gt_RCA|dicom_[0-9]{7,8}\b|patientingroupid\s*[:=]\s*["\x27]?[0-9]+|patient_in_group_id\s*[:=]\s*["\x27]?[0-9]+|<researcher-1>|<researcher-2>|<handle>|身份证|\b[0-9]{17}[0-9Xx]\b|AKIA[0-9A-Z]{16}|sk_live_[A-Za-z0-9]{24,}|password\s*=\s*["\x27][^"\x27]{8,}|/home/[a-z][a-z0-9_-]*/|/Users/[a-z][a-z0-9_-]*/|patient_name_chinese|patient_name_pinyin|[,\t|]\s*(患者姓名|病人姓名)\s*[,\t|]'
+
+# Group 7 — PROJECT-SPECIFIC: this repository is the one that goes PUBLIC.
+# Everything below is here because it was actually found in this repo on
+# 2026-09-18, during the audit before making it public:
+#
+#   - 100 rows of `results_expected/byte_identity_synthetic.csv` carried internal
+#     hospital case identifiers (dicom_NNNNNNN). The file is named "synthetic"
+#     because the Hounsfield values are; the masks came from real cases and the
+#     identifiers rode along. Group 1 of the shared pattern catches that shape,
+#     and this repo had no hook at all, which is why it got in.
+#   - A stale journal name and a retracted speedup figure, which no hook can
+#     catch -- see CONTRIBUTING.md for the manuscript-sync checklist instead.
+#
+# Extra shapes worth blocking specifically here, since a public push is not
+# reversible: COCA case ids paired with an expert score, and NLST local paths.
+PROJECT_PATTERN='gt_total|gt_LCA|gt_LAD|gt_LCX|gt_RCA'
+
+# Group 7 (upstream note) — PROJECT-SPECIFIC additions. Uncomment / edit per repo, then OR them
+# into PATTERN above. Examples:
+#   vbca:           'numeric_id\s*[:=]\s*["\x27]?[0-9]+'
+#   ai-cac-research:'\bpid[_-]?[0-9]{6,}\b'
+#   cac-plus:       '1\.2\.840\.[0-9.]{20,}'   # bare SeriesInstanceUID
+# PROJECT_PATTERN=''
+# [[ -n "${PROJECT_PATTERN:-}" ]] && PATTERN="$PATTERN|$PROJECT_PATTERN"
+
+# ---------------------------------------------------------------------------
+# Group 8 — LOCAL patterns (2026-09-11). Patient names and other identifiers
+# that must NOT be written into a tracked file, because putting them here
+# would itself commit the very string we are trying to keep out.
+#
+# Put one regex per line in .githooks/phi_patterns.local (gitignored, never
+# committed, per-clone). Blank lines and # comments are ignored.
+#
+# Why this exists: on 2026-09-11 a patient name reached three narrative docs
+# and the Chinese paper inventory across three repos. The name group above
+# covers only researchers (<researcher-1> / <researcher-2> / <handle>), so this hook would not
+# have caught it. Group 8 closes that hole without leaking the name.
+# ---------------------------------------------------------------------------
+LOCAL_PATTERN_FILE="$(git rev-parse --show-toplevel)/.githooks/phi_patterns.local"
+if [[ -r "$LOCAL_PATTERN_FILE" ]]; then
+    LOCAL_PATTERN=$(grep -vE '^\s*(#|$)' "$LOCAL_PATTERN_FILE" | paste -sd'|' -)
+    [[ -n "$LOCAL_PATTERN" ]] && PATTERN="$PATTERN|$LOCAL_PATTERN"
+fi
+
+# Allowlist: files that legitimately discuss the patterns themselves.
+# .gitignore is on this list (added 2026-09-11): its whole purpose is to name
+# sensitive paths, and its comments explain why each is excluded — e.g.
+# "<researcher-2>身份证号绝不入库". Those comments are the control working, not a leak.
+# It holds path patterns, never record values, so the residual risk is low.
+ALLOWLIST_RE='\.githooks/pre-commit|\.githooks/README\.md|SECURITY\.md|CHANGELOG\.md|CLAUDE\.md|docs/THREAT_MODEL\.md|docs/legacy/README\.md|POST_BASELINE_TODO\.md|pyproject\.toml|LICENSE|\.gitignore'
+
+# Hard stop: the local pattern file must never be committed, allowlisted or not.
+if git diff --cached --name-only --diff-filter=AM | grep -qx '\.githooks/phi_patterns\.local'; then
+    echo "ERROR: .githooks/phi_patterns.local is staged. It holds the very identifiers" >&2
+    echo "       this hook exists to keep out of git. Unstage it and add it to .gitignore." >&2
+    exit 1
+fi
+
+mapfile -t staged < <(
+    git diff --cached --name-only --diff-filter=AM \
+        | grep -vxE "$ALLOWLIST_RE" \
+        || true
+)
+
+if (( ${#staged[@]} == 0 )); then
+    exit 0
+fi
+
+hits=$(git grep --cached -nE "$PATTERN" -- "${staged[@]}" 2>/dev/null || true)
+
+if [[ -n "$hits" ]]; then
+    cat >&2 <<EOF
+============================================================
+ERROR: pre-commit blocked — PHI / PII / credential pattern detected
+============================================================
+
+$hits
+
+Pattern groups blocked:
+  1. DICOM patient folders: dicom_NNNNNNN(N)
+  2. Clinical-DB patient ID columns assigned a value
+  3. Real names: <researcher-1> / <researcher-2> / <handle>
+  4. Chinese national ID literal or 18-digit shape
+  5. Hardcoded credentials (AWS, Stripe, password=...)
+  6. Username-leaking paths: /home/<user>/ or /Users/<user>/
+  7. (project-specific, if enabled)
+  8. (local patterns from .githooks/phi_patterns.local, if present)
+  9. Patient-name column headers (patient_name_chinese / _pinyin, or
+     患者姓名 / 病人姓名 adjacent to a comma/tab/pipe as in a CSV header)
+
+Why this hook exists:
+  cardiac repos are private and patent-pending. Even on a private repo,
+  PHI/PII in git history is a permanent liability — rewrites are slow
+  and incomplete. This hook prevents accidental commits.
+
+If the match is legitimate (e.g. you are documenting the cleanup):
+  1. add the file path to ALLOWLIST_RE in .githooks/pre-commit, or
+  2. bypass once with: CARDIAC_ALLOW_PII=1 git commit ...
+
+============================================================
+EOF
+    exit 1
+fi
+
+exit 0

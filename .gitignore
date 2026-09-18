@@ -1,10 +1,22 @@
+# Python
 __pycache__/
-*.pyc
-.venv/
+*.py[cod]
+*.egg-info/
 venv/
-weights/
+.venv/
+
+# Local data — never committed. The cohorts are obtained by the reader from
+# NCI (NLST) and Stanford AIMI (COCA) under their own agreements.
 data/nlst/
 data/coca/
-# generated figures (regenerate with figures/generate_figures.py)
-figures/*.png
-figures/*.pdf
+weights/
+*.nii
+*.nii.gz
+*.dcm
+
+# COCA is redistributable by nobody but Stanford: its Research Use Agreement
+# forbids publishing "any portion" of the Dataset, and its dataset page
+# describes the expert scores as part of the Dataset rather than a derivative.
+# Nothing COCA-derived belongs in this repository.
+*coca*.csv
+*COCA*.csv

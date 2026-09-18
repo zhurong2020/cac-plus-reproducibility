@@ -15,7 +15,16 @@ six further Siemens acquisitions measure 0.9967-1.0031 mm instead of 1.0, so
 their ratio is 1.994-2.007 -- the same 50%-overlap protocol with sub-millimetre
 jitter in the reported slice positions. The paper's count was right; the sentence
 that followed it ("the remaining acquisitions have ratio approximately 1.0 and
-the fix is a no-op") was not, and was corrected on 2026-09-18.
+the fix is a no-op") was not.
+
+That sentence was corrected once, for those six, and the correction was
+incomplete: 50 GE acquisitions sit at ratio 1.15-1.50 and five more are outliers
+(three where the measured spacing exceeds the nominal thickness, one at 1.11, one
+at 2.51), and five Siemens sit 0.6% off 1.0. On all 60 the fix changes the
+multiplier, so calling them no-ops was wrong by 60 acquisitions, not six. This script printed the same wrong bucket --
+"no-op (ratio ~ 1.0)" for everything outside the 2.0 band -- while its own
+docstring claimed the correction had been made. Both were fixed 2026-09-18 and
+the full decomposition is now asserted, so the two cannot drift apart again.
 
 The fix itself never depended on the bucket: it uses each acquisition's measured
 spacing. Only the description did.
@@ -35,6 +44,11 @@ MANIFEST = pathlib.Path(__file__).resolve().parents[1] / "results_expected" / "n
 EXPECT_EXACT = 274          # §3.6: 266 Siemens + 8 GE Medical Systems
 EXPECT_EXACT_BY_VENDOR = {"SIEMENS": 266, "GE MEDICAL SYSTEMS": 8}
 EXPECT_NEAR = 280           # within 0.4% of 2.0
+# The rest of the cohort, which the paper used to call a no-op wholesale.
+EXPECT_MID = 50             # GE, ratio 1.15-1.50
+EXPECT_NEAR_ONE = 5         # Siemens, ratio 1.0055-1.0064 (position jitter)
+EXPECT_OUTLIER = 5          # 3 with spacing > nominal, 1 at 1.11, 1 at 2.51
+EXPECT_NOOP = 1891          # ratio exactly 1.0 -- byte-identical to the vendor
 TOLERANCE = 0.004
 
 
@@ -42,16 +56,29 @@ def main() -> int:
     rows = [r for r in csv.DictReader(MANIFEST.open()) if r["reconstruction"] == "thin"]
     print(f"NLST thin-slice acquisitions in the manifest: {len(rows)}")
 
-    exact, near = [], []
+    # `near` contains `exact`; the other four buckets are disjoint from it and
+    # from each other, so the five partition the cohort and the sum is asserted.
+    exact, near, mid, near_one, exact_one, outlier, unparsed = [], [], [], [], [], [], []
     for r in rows:
         try:
             ratio = float(r["nominal_thickness_mm"]) / float(r["actual_spacing_mm"])
         except (ValueError, ZeroDivisionError, KeyError):
+            # Dropping these silently would let the partition check pass on a
+            # smaller cohort than the one the paper reports.
+            unparsed.append(r)
             continue
         if ratio == 2.0:
             exact.append(r)
         if abs(ratio - 2.0) <= 2.0 * TOLERANCE:
             near.append(r)
+        elif 1.15 <= ratio <= 1.50:
+            mid.append(r)
+        elif ratio == 1.0:
+            exact_one.append(r)
+        elif abs(ratio - 1.0) <= 0.01:
+            near_one.append(r)
+        else:
+            outlier.append(ratio)
 
     by_vendor = collections.Counter(r["manufacturer"] for r in exact)
     print(f"\nratio exactly 2.0 : {len(exact)}")
@@ -59,7 +86,11 @@ def main() -> int:
         print(f"    {vendor}: {n}")
     print(f"ratio within {100 * TOLERANCE:.1f}% of 2.0 : {len(near)}"
           f"   (+{len(near) - len(exact)} with sub-millimetre position jitter)")
-    print(f"no-op (ratio ~ 1.0) : {len(rows) - len(near)}")
+    print(f"ratio 1.15-1.50 (GE) : {len(mid)}")
+    print(f"within 1% of 1.0 (position jitter) : {len(near_one)}")
+    print(f"outliers : {len(outlier)}   (ratios "
+          + ", ".join(f"{x:.2f}" for x in sorted(outlier)) + ")")
+    print(f"no-op (ratio exactly 1.0) : {len(exact_one)}")
 
     fails = []
     if len(exact) != EXPECT_EXACT:
@@ -68,6 +99,17 @@ def main() -> int:
         fails.append(f"vendor split {dict(by_vendor)} != published {EXPECT_EXACT_BY_VENDOR}")
     if len(near) != EXPECT_NEAR:
         fails.append(f"near-2.0 count {len(near)} != {EXPECT_NEAR}")
+    for label, got, want in (("ratio 1.15-1.50", len(mid), EXPECT_MID),
+                             ("minor offsets near 1.0", len(near_one), EXPECT_NEAR_ONE),
+                             ("outliers", len(outlier), EXPECT_OUTLIER),
+                             ("no-op at exactly 1.0", len(exact_one), EXPECT_NOOP)):
+        if got != want:
+            fails.append(f"{label} count {got} != published {want}")
+    total = len(near) + len(mid) + len(near_one) + len(outlier) + len(exact_one)
+    if total + len(unparsed) != len(rows):
+        fails.append(f"buckets sum to {total} (+{len(unparsed)} unparsed) != {len(rows)}")
+    if unparsed:
+        fails.append(f"{len(unparsed)} rows have no usable spacing ratio")
     if fails:
         print("\nFAIL:")
         for f in fails:

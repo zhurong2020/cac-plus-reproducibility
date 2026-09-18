@@ -20,3 +20,6 @@ weights/
 # Nothing COCA-derived belongs in this repository.
 *coca*.csv
 *COCA*.csv
+
+# PHI patterns local to this clone — never committed (the hook refuses it too).
+.githooks/phi_patterns.local

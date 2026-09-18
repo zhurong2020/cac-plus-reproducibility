@@ -32,8 +32,12 @@ fi
 # examples in test fixtures).
 #   1. DICOM patient-folder layout: dicom_NNNNNNN, dicom_NNNNNNNN (7-8 digits)
 #   2. Patient-ID column names from Dr. Chen's clinical databases
-#   3. Real names tied to this workspace: <researcher-1> / <researcher-2> / <handle>
-#   4. Chinese national ID (身份证) — literal label or 18-digit shape
+#   3. (moved to group 8) Real names live in the gitignored local pattern
+#      file, not here. This repository is published, and a tracked hook that
+#      hardcodes people's names publishes them along with itself.
+#   4. Chinese national ID — the label followed by digits, or a bare 18-digit
+#      shape. The label alone used to match, so prose discussing the document
+#      type tripped it. Narrowed 2026-09-18, both directions tested.
 #   5. Bare credential shapes (AWS AKIA, Stripe sk_live_, password=...)
 #   6. Username-leaking absolute paths: /home/<user>/ or /Users/<user>/
 #   9. Patient-name COLUMN HEADERS (added 2026-09-11). A file naming such a
@@ -48,7 +52,7 @@ fi
 #      or pipe, which a CSV header row has and Chinese prose does not (prose
 #      uses the ideographic comma 、). The ASCII column names stay unconditional.
 # ---------------------------------------------------------------------------
-PATTERN='dicom_[0-9]{7,8}\b|patientingroupid\s*[:=]\s*["\x27]?[0-9]+|patient_in_group_id\s*[:=]\s*["\x27]?[0-9]+|<researcher-1>|<researcher-2>|<handle>|身份证|\b[0-9]{17}[0-9Xx]\b|AKIA[0-9A-Z]{16}|sk_live_[A-Za-z0-9]{24,}|password\s*=\s*["\x27][^"\x27]{8,}|/home/[a-z][a-z0-9_-]*/|/Users/[a-z][a-z0-9_-]*/|patient_name_chinese|patient_name_pinyin|[,\t|]\s*(患者姓名|病人姓名)\s*[,\t|]'
+PATTERN='dicom_[0-9]{7,8}\b|patientingroupid\s*[:=]\s*["\x27]?[0-9]+|patient_in_group_id\s*[:=]\s*["\x27]?[0-9]+|身份证[^0-9\n]{0,10}[0-9]{6,}|\b[0-9]{17}[0-9Xx]\b|AKIA[0-9A-Z]{16}|sk_live_[A-Za-z0-9]{24,}|password\s*=\s*["\x27][^"\x27]{8,}|/home/[a-z][a-z0-9_-]*/|/Users/[a-z][a-z0-9_-]*/|patient_name_chinese|patient_name_pinyin|[,\t|]\s*(患者姓名|病人姓名)\s*[,\t|]'
 
 # Group 7 — PROJECT-SPECIFIC: this repository is the one that goes PUBLIC.
 # Everything below is here because it was actually found in this repo on
@@ -84,8 +88,9 @@ PROJECT_PATTERN='gt_total|gt_LCA|gt_LAD|gt_LCX|gt_RCA'
 #
 # Why this exists: on 2026-09-11 a patient name reached three narrative docs
 # and the Chinese paper inventory across three repos. The name group above
-# covers only researchers (<researcher-1> / <researcher-2> / <handle>), so this hook would not
-# have caught it. Group 8 closes that hole without leaking the name.
+# covered only a fixed list of researchers, so this hook would not have caught
+# it. Group 8 closes that hole without writing any name into a tracked file --
+# which is also why the researcher names themselves now live there.
 # ---------------------------------------------------------------------------
 LOCAL_PATTERN_FILE="$(git rev-parse --show-toplevel)/.githooks/phi_patterns.local"
 if [[ -r "$LOCAL_PATTERN_FILE" ]]; then
@@ -95,8 +100,8 @@ fi
 
 # Allowlist: files that legitimately discuss the patterns themselves.
 # .gitignore is on this list (added 2026-09-11): its whole purpose is to name
-# sensitive paths, and its comments explain why each is excluded — e.g.
-# "<researcher-2>身份证号绝不入库". Those comments are the control working, not a leak.
+# sensitive paths, and its comments explain why each is excluded, naming the
+# record type being kept out. Those comments are the control working, not a leak.
 # It holds path patterns, never record values, so the residual risk is low.
 ALLOWLIST_RE='\.githooks/pre-commit|\.githooks/README\.md|SECURITY\.md|CHANGELOG\.md|CLAUDE\.md|docs/THREAT_MODEL\.md|docs/legacy/README\.md|POST_BASELINE_TODO\.md|pyproject\.toml|LICENSE|\.gitignore'
 
@@ -161,7 +166,7 @@ $hits
 Pattern groups blocked:
   1. DICOM patient folders: dicom_NNNNNNN(N)
   2. Clinical-DB patient ID columns assigned a value
-  3. Real names: <researcher-1> / <researcher-2> / <handle>
+  3. (see group 8 — real names come from the local pattern file)
   4. Chinese national ID literal or 18-digit shape
   5. Hardcoded credentials (AWS, Stripe, password=...)
   6. Username-leaking paths: /home/<user>/ or /Users/<user>/

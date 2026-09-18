@@ -26,18 +26,17 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install -r requirements.txt
 
-      - name: C1 — byte-identical Agatston (no data required)
-        run: python benchmarks/byte_identity_synthetic.py
-
-      - name: C5 — axial-spacing audit from the shipped manifest
-        run: python analysis/spacing_audit.py
-
+      # The same entry point a reader runs, so CI cannot drift from the
+      # documented command. It verifies the published values rather than exit
+      # codes: a script that prints a median exits zero whether the median is
+      # 1.97 or the withdrawn 5.87.
+      #
       # NOT build_cohort_manifests.py: that reads private source tables from a
       # sibling repository, so CI cannot run it -- it tried on 2026-09-18 and
       # failed. A reader cloning this repo is in CI's position: able to check the
       # shipped artefact, not to rebuild it.
-      - name: Table 1 — shipped cohort manifest
-        run: python scripts/verify_cohort_manifest.py
+      - name: Every check that needs no cohort access
+        run: python scripts/reproduce_all.py
 
       - name: Nothing COCA-derived is committed
         run: |

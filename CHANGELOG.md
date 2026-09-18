@@ -47,6 +47,12 @@ changes of target journal. None of the drift was catchable by a test, which is w
 - **Pre-commit hook** (`.githooks/pre-commit`), from `cardiac-shared`, plus the COCA
   expert-score column names that the Stanford Research Use Agreement forbids redistributing.
   Per-clone: `git config core.hooksPath .githooks`.
+- **`scripts/reproduce_all.py`** — one command that runs every available check and
+  verifies the values the manuscript reports, rather than exit codes. Exit zero is not
+  reproduction: `speedup_realct.py` prints a median and exits zero whether that median is
+  1.97 or the withdrawn 5.87, which this README advertised for ten weeks. CI now runs this
+  same entry point, so the documented command cannot drift from the tested one. Verified to
+  fail when fed the wrong arm's scores.
 - **`scripts/verify_cohort_manifest.py`** — checks the *shipped* manifest using nothing but
   this repository. CI's first run failed because it tried to run the *builder*, which reads
   private source tables from a sibling repo. A reader cloning this package is in CI's
@@ -55,6 +61,17 @@ changes of target journal. None of the drift was catchable by a test, which is w
   the manifest denominators, on Python 3.10/3.12/3.13, with guards against a COCA-derived
   file or an internal identifier becoming tracked.
 - **`SECURITY.md`**, **`CONTRIBUTING.md`**, this file.
+
+### Changed
+
+- **Four of the five checks need no data at all**, which the README had wrong: it labelled
+  `speedup_realct.py` as needing the NLST images. It does not — it summarises the shipped
+  50-case per-case timings. Re-*measuring* those timings needs images and a GPU;
+  reproducing the published statistics from them needs neither.
+- `matplotlib` dropped from `requirements.txt`. It was only needed by the figure generator
+  removed with §3.6, leaving numpy and scipy — and scipy is not optional, since
+  `scipy.ndimage.label` is the connected-component pass at the core of both Agatston
+  implementations.
 
 ### Removed
 

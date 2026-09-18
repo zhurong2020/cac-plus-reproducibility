@@ -16,27 +16,50 @@ pip install -r requirements.txt
 git config core.hooksPath .githooks      # PHI/PII pre-commit hook; per-clone, not pushed
 ```
 
-## Reproduce the paper
-
-Every script asserts its published values and **exits non-zero if a number disagrees with
-the manuscript**. An expected value written only in a comment is not a check.
+## Reproduce the paper — one command
 
 ```bash
-# Self-contained — no data, no weights, no network. Start here.
-python benchmarks/byte_identity_synthetic.py     # C1  -> 100/100 byte-identical Agatston
+python scripts/reproduce_all.py
+```
 
-# From the shipped result tables — no images needed.
-python analysis/spacing_audit.py                 # C5  -> 274 at ratio exactly 2.0 (266 SIEMENS + 8 GE)
-python scripts/verify_cohort_manifest.py         # Table 1 -> asserts n = 2,231
+**Four of the five checks need no data at all** — no images, no model weights, no
+network. They run from the per-case result tables in `results_expected/`. The runner
+prints a verdict per check and exits non-zero if any published value fails to reproduce.
 
-# Needs the NLST images (see data/README.md).
-python benchmarks/speedup_realct.py              # C2  -> median 1.97x real-CT, 50/50 identical
+The fifth needs two CSVs from your own COCA download (see below):
 
-# Needs your own COCA download, both files (see data/README.md).
+```bash
+python scripts/reproduce_all.py --coca-scores yours.csv --coca-reference your_coca_gt.csv
+```
+
+### First-clone test, from scratch
+
+```bash
+git clone https://github.com/zhurong2020/cac-plus-reproducibility && cd cac-plus-reproducibility
+python3 -m venv venv && . venv/bin/activate     # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python scripts/reproduce_all.py
+```
+
+Expected last line: `All 4 runnable checks reproduce the manuscript.`
+
+### Why a runner and not a list of commands
+
+Exit code zero is not the same as reproducing a published number. A script that reads a
+table and prints a median exits zero whether that median is 1.97 or 5.87 — and this README
+advertised 5.87 for ten weeks after it was withdrawn. So each check carries the values the
+manuscript reports and the runner fails if the output does not contain them.
+
+Each script also still runs on its own, and prints more than the runner shows:
+
+```bash
+python benchmarks/byte_identity_synthetic.py   # C1  -> 100/100 byte-identical Agatston
+python benchmarks/speedup_realct.py            # C2  -> median 1.97x, 50/50 identical
+python analysis/spacing_audit.py               # C5  -> 274 at ratio exactly 2.0
+python scripts/verify_cohort_manifest.py       # Table 1 -> n = 2,231
 python analysis/agreement_panel.py --scores yours.csv --reference your_coca_gt.csv
-                                                 # 3.1 -> zero-CAC 52.4% scored vs 42.7% reference
-                                                 # 3.7 -> CCC 0.856, ICC 0.857, kappa 0.734,
-                                                 #        CAC>0 sensitivity 72.0%
+                                               # 3.1 -> zero-CAC 52.4% vs 42.7%
+                                               # 3.7 -> CCC 0.856, ICC 0.857, kappa 0.734
 ```
 
 ## What reproduces what
@@ -44,9 +67,10 @@ python analysis/agreement_panel.py --scores yours.csv --reference your_coca_gt.c
 | Script | Manuscript | Reproduces |
 |---|---|---|
 | `benchmarks/byte_identity_synthetic.py` | §3.2 (C1), Fig 3a | vectorised == vendor-reference Agatston, byte for byte |
-| `benchmarks/speedup_realct.py` | §3.3 (C2), Fig 3b/c | real-CT speedup distribution + per-stratum medians |
+| `benchmarks/speedup_realct.py` | §3.3 (C2), Fig 3b/c | the speedup statistics, from the shipped 50-case per-case timings. Re-*measuring* the timings would need the images and a GPU; this reproduces the published summary from the measurements |
 | `analysis/spacing_audit.py` | §3.6 (C5) | the `ImagePositionPatient` overlap-reconstruction audit |
 | `analysis/agreement_panel.py` | §3.1, **§3.7** | zero-CAC rates; agreement against the COCA expert reference, either arm |
+| `scripts/reproduce_all.py` | all of the above | runs every available check and verifies the published values |
 | `scripts/verify_cohort_manifest.py` | §2.3 / Table 1 | checks the shipped manifest: denominator, one row per series UID, no leak |
 | `scripts/build_cohort_manifests.py` | — | **maintainer only**; rebuilds the manifest from private source tables, so neither CI nor a reader can run it |
 | `src/agatston_vectorised.py`, `src/agatston_vendor_ref.py` | Table 2 | the two Agatston implementations proven identical |

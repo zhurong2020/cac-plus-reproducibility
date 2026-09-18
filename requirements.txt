@@ -1,6 +1,7 @@
+# numpy and scipy only. scipy is not optional: scipy.ndimage.label is the
+# connected-component pass at the core of both Agatston implementations.
 numpy>=1.24
 scipy>=1.10
-matplotlib>=3.7
 # optional, only needed to re-run scoring from raw CT images (not for the analyses):
 # pydicom>=2.4
 # nibabel>=5.1

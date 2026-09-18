@@ -18,13 +18,57 @@ contain them -- which is what "reproduces" has to mean.
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
-GREEN, RED, YELLOW, DIM, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[2m", "\033[0m"
+
+def _colour_supported() -> bool:
+    """Whether writing ANSI colour to stdout will render rather than litter it.
+
+    Windows PowerShell 5.1 -- still the default shell on a stock Windows install
+    -- does not process VT sequences unless they are switched on, so an
+    unconditional "\033[32m" prints as a literal `[32m` before every status. A
+    reviewer opening this package on Windows saw exactly that on 2026-09-18.
+
+    Order matters: honour NO_COLOR first (it is a user's explicit choice), then
+    refuse colour when stdout is not a terminal (a redirected log should be
+    plain text), then on Windows try to enable VT processing and fall back to no
+    colour if the console will not take it.
+    """
+    if os.environ.get("NO_COLOR") is not None:
+        return False
+    if not sys.stdout.isatty():
+        return False
+    if sys.platform != "win32":
+        return True
+    try:                                      # pragma: no cover - Windows only
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)   # STD_OUTPUT_HANDLE
+        mode = ctypes.c_uint32()
+        if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            return False
+        ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+        return bool(kernel32.SetConsoleMode(
+            handle, mode.value | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+    except Exception:
+        return False
+
+
+COLOUR = _colour_supported()
+GREEN, RED, YELLOW, DIM, RESET = (
+    ("\033[32m", "\033[31m", "\033[33m", "\033[2m", "\033[0m") if COLOUR
+    else ("", "", "", "", ""))
+
+# Without colour the status has to carry itself, so bracket it. This is also the
+# workspace convention for anything that may be read on a Windows console.
+MARK = {"PASS": "[PASS]", "FAIL": "[FAIL]", "SKIP": "[SKIP]"} if not COLOUR else \
+       {"PASS": "PASS", "FAIL": "FAIL", "SKIP": "SKIP"}
 
 
 class Check:
@@ -38,8 +82,15 @@ class Check:
         missing = [p for p in self.needs if not pathlib.Path(p).exists()]
         if missing:
             return "SKIP", f"needs {', '.join(str(m) for m in missing)}", ""
-        proc = subprocess.run([sys.executable, *self.argv], cwd=REPO,
-                              capture_output=True, text=True)
+        # Force UTF-8 on both sides. With text=True the parent decodes using its
+        # locale and the child encodes using its own; on a GBK console -- the
+        # default in a Chinese Windows install -- those disagree and this raised
+        # UnicodeDecodeError before printing anything. A reviewer would have seen
+        # a traceback instead of a result.
+        env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
+        proc = subprocess.run([sys.executable, *self.argv], cwd=REPO, env=env,
+                              capture_output=True, encoding="utf-8",
+                              errors="replace")
         out = proc.stdout + proc.stderr
         if proc.returncode != 0:
             first = next((l for l in out.splitlines() if l.strip()), "no output")
@@ -52,27 +103,27 @@ class Check:
 
 def build_checks(coca_scores, coca_reference):
     checks = [
-        Check("byte-identical Agatston", "§3.2 (C1)",
+        Check("byte-identical Agatston", "sec 3.2 (C1)",
               ["benchmarks/byte_identity_synthetic.py"],
               expect=["preserves the Agatston score exactly"],
               note="freshly generated volumes, no data needed"),
-        Check("Agatston-step speedup", "§3.3 (C2)",
+        Check("Agatston-step speedup", "sec 3.3 (C2)",
               ["benchmarks/speedup_realct.py"],
               expect=["50/50", "median 1.97x", "1.09x", "5.53x"],
               note="median 1.97x, 50/50 identical, per-stratum medians"),
-        Check("axial-spacing audit", "§3.6 (C5)",
+        Check("axial-spacing audit", "sec 3.6 (C5)",
               ["analysis/spacing_audit.py"],
               expect=["ratio exactly 2.0 : 274", "SIEMENS: 266", "GE MEDICAL SYSTEMS: 8",
                       "within 0.4% of 2.0 : 280"],
               note="274 at exactly 2.0; 280 within 0.4%"),
-        Check("cohort manifest", "§2.3 / Table 1",
+        Check("cohort manifest", "sec 2.3 / Tab 1",
               ["scripts/verify_cohort_manifest.py"],
               expect=["2231 NLST thin-slice acquisitions", "2231 distinct SeriesInstanceUIDs"],
               note="n = 2,231, one row per series UID, no leak"),
     ]
     if coca_scores and coca_reference:
         checks.append(Check(
-            "COCA agreement panel", "§3.1 + §3.7",
+            "COCA agreement panel", "sec 3.1 + 3.7",
             ["analysis/agreement_panel.py", "--scores", str(coca_scores),
              "--reference", str(coca_reference)],
             # Every published §3.1/§3.7 value for the CAC Plus arm. If the reader
@@ -84,7 +135,7 @@ def build_checks(coca_scores, coca_reference):
             note="CCC 0.856, ICC 0.857, kappa 0.734, sens 72.0%, zero-CAC 52.4/42.7"))
     else:
         checks.append(Check(
-            "COCA agreement panel", "§3.1 + §3.7",
+            "COCA agreement panel", "sec 3.1 + 3.7",
             ["analysis/agreement_panel.py"],
             expect=[], needs=("--coca-scores and --coca-reference",),
             note=""))
@@ -103,14 +154,15 @@ def main() -> int:
     a = ap.parse_args()
 
     checks = build_checks(a.coca_scores, a.coca_reference)
-    print(f"CAC Plus reproducibility package — {len(checks)} checks\n")
+    print(f"CAC Plus reproducibility package - {len(checks)} checks\n")
 
     results = []
     for c in checks:
-        print(f"{DIM}running{RESET} {c.name} ...", end="\r", flush=True)
+        if COLOUR:
+            print(f"{DIM}running{RESET} {c.name} ...", end="\r", flush=True)
         status, detail, out = c.run()
         colour = {"PASS": GREEN, "FAIL": RED, "SKIP": YELLOW}[status]
-        print(f"  {colour}{status:4}{RESET}  {c.section:<16} {c.name:<26} {DIM}{detail}{RESET}")
+        print(f"  {colour}{MARK[status]:<6}{RESET} {c.section:<16} {c.name:<26} {DIM}{detail}{RESET}")
         if a.verbose or status == "FAIL":
             for line in out.splitlines():
                 print(f"         {DIM}{line}{RESET}")
@@ -119,12 +171,12 @@ def main() -> int:
     n_pass, n_fail, n_skip = (results.count(s) for s in ("PASS", "FAIL", "SKIP"))
     print()
     if n_fail:
-        print(f"{RED}FAILED{RESET} — {n_fail} check(s) did not reproduce a published value. "
+        print(f"{RED}FAILED{RESET} - {n_fail} check(s) did not reproduce a published value. "
               f"{n_pass} passed, {n_skip} skipped.")
         return 1
     if n_skip:
         print(f"{GREEN}{n_pass} of {n_pass} runnable checks reproduce the manuscript.{RESET}")
-        print(f"{YELLOW}{n_skip} skipped{RESET} — pass --coca-scores and --coca-reference to "
+        print(f"{YELLOW}{n_skip} skipped{RESET} - pass --coca-scores and --coca-reference to "
               f"include the COCA panel (see README).")
         return 0
     print(f"{GREEN}All {n_pass} checks reproduce the manuscript.{RESET}")

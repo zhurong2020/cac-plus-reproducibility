@@ -43,6 +43,11 @@ python scripts/reproduce_all.py
 
 Expected last line: `All 4 runnable checks reproduce the manuscript.`
 
+Verified on native Windows (PowerShell, Python 3.11, numpy 2.4.6, scipy 1.17.1), on Linux,
+and in CI across Python 3.10–3.13. Output is ASCII and colour is used only when the terminal
+supports it, so a Windows PowerShell 5.1 or GBK console gets plain readable text rather than
+escape codes or a traceback.
+
 ### Why a runner and not a list of commands
 
 Exit code zero is not the same as reproducing a published number. A script that reads a

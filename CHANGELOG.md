@@ -47,6 +47,19 @@ changes of target journal. None of the drift was catchable by a test, which is w
 - **Pre-commit hook** (`.githooks/pre-commit`), from `cardiac-shared`, plus the COCA
   expert-score column names that the Stanford Research Use Agreement forbids redistributing.
   Per-clone: `git config core.hooksPath .githooks`.
+- **Windows console support in `scripts/reproduce_all.py`**, after a native-Windows run on
+  2026-09-18 exposed two defects the Linux CI could not see. Windows PowerShell 5.1 -- the
+  default shell on a stock install -- does not process VT sequences, so every status line
+  printed a literal `[32m` before it. And under a GBK console, the default in a Chinese
+  Windows install, the runner **crashed with UnicodeDecodeError before printing anything**,
+  because the parent decoded child output with its locale while the child encoded with its
+  own. A reviewer would have seen a traceback instead of a result. Colour is now conditional
+  (NO_COLOR, then isatty, then an attempt to enable VT on Windows), statuses read `[PASS]` /
+  `[FAIL]` / `[SKIP]` without it, child processes are pinned to UTF-8 on both sides, and this
+  runner's own output is ASCII only -- the workspace convention, for exactly this reason.
+- **Python 3.11 added to the CI matrix.** It was the gap: the same Windows run used 3.11 with
+  numpy 2.4.6 and scipy 1.17.1 and passed, on an interpreter and a dependency pair the matrix
+  had never covered.
 - **`scripts/reproduce_all.py`** — one command that runs every available check and
   verifies the values the manuscript reports, rather than exit codes. Exit zero is not
   reproduction: `speedup_realct.py` prints a median and exits zero whether that median is

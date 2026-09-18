@@ -74,7 +74,7 @@ a COCA case manifest (briefly, the same day); both were withdrawn.
 **Reproducing §3.1 costs nothing extra**, because this repository ships the scoring engine itself:
 register for COCA, download the non-gated release, score it with CAC Plus v2.5.2, build the expert
 reference from the annotations in your own download, and run
-`analysis/coca_vs_reference.py --scores <yours> --reference <yours>`. The script prints the
+`analysis/agreement_panel.py --scores <yours> --reference <yours>`. The script prints the
 manuscript's expected values alongside yours.
 
 If Stanford grants written permission, restoring the case manifest is a one-commit change.

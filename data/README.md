@@ -59,7 +59,7 @@ the manuscript and refuses to write a manifest that disagrees with the paper.
 
 Use the release's own score table, `nongated_chest_ct/scores.xlsx`: 213 non-gated acquisitions
 with per-vessel LCA / LAD / LCX / RCA values and a total. Build your `--reference` CSV from its
-`filename` and `total` columns (ids look like `1A`, `195A`). On a handful of rows the four vessel
+`filename` and `total` columns (the identifier is a number followed by `A`). On a handful of rows the four vessel
 values do not sum to the released total by a few Agatston; that is rounding in the release, and
 `total` is the column to use.
 

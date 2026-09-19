@@ -5,6 +5,56 @@ All notable changes to this reproducibility package.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versions track the CAC Plus engine release they reproduce, suffixed `-repro`.
 
+## [v2.5.2-repro] — public, and corrected by three rounds of external review (2026-09-19)
+
+The repository went public on 2026-09-19. Four external reviewers then read the manuscript with
+this package in hand and recomputed from it, which found more here than the pre-publication
+audit had.
+
+### Fixed
+
+- **The benchmark stratified on a superseded release.** `speedup_realct.py` binned cases by the
+  CSV's `stratum` column, which derives from `ref_agatston` — the December 2025 release's score
+  for the same case, i.e. a previous version of the engine being benchmarked. It moves nine
+  cases: 30/20 zero/positive under that column, 21/29 under the scores the paper reports, and a
+  calcium-positive median of 4.80x against 3.30x. Both the benchmark and `reproduce_all.py` now
+  stratify on `cac_plus_score` and assert 1.01 / 2.28 / 5.07 / 4.69 / 5.53.
+- **A retracted number was still advertised.** `agatston_vectorised.py` gave the real-CT speedup
+  as 5.87x, withdrawn in manuscript v1.1.0 after the transposed/F-contiguous benchmark defect.
+- **`agatston_vendor_ref.py` described itself wrongly, twice.** It said it mirrors the vendor's
+  *per-voxel* reference logic: the vendor's loop is per connected object, and this file is **our
+  re-implementation, not the vendor's code**. The docstring now says so, because it bounds what
+  the package's byte-identity benchmark shows — it establishes agreement with this transcription,
+  not with the vendor's own file, and the manuscript's C1 was produced against the latter.
+- **`agreement_panel.py` quoted text the manuscript had retracted** ("statistically
+  indistinguishable on every measure") along with the pre-correction denominator and sensitivity.
+- **The tag pointed at the wrong commit — twice.** `v2.5.2-repro` was at a commit predating the
+  fixes above, so a reader checking it out got no interval function and a benchmark asserting
+  superseded medians, **and it returned PASS on them**. Re-pointed, and verified from a fresh
+  anonymous clone at the tag.
+
+### Added
+
+- `analysis/speedup_intervals.py` — one documented function for every speedup interval the paper
+  reports, stating the convention in full and asserting the published values. Written because the
+  paper's all-50 interval could not be reproduced from the package: it read 1.26–3.01x and two
+  independent implementations of the stated convention both return 1.25–3.01x. The paper now
+  reports what this function returns.
+- **`nlst_batch` in the cohort manifest**, with assertions in `spacing_audit.py`. The manuscript
+  says the 274 exact-2.0 cases are "all in NLST batch 3" and that the 50 at ratio 1.25 split
+  48/2; neither was checkable from the shipped manifest, which had study dates and no batch. Both
+  hold exactly.
+- `patches/monai_1.5.1_compatibility.patch`, `requirements-vendor-frozen-cu116.txt` and
+  `TROUBLESHOOTING.md` — three artifacts Online Methods M9 promised and this package did not
+  contain. The troubleshooting guide is written for this package rather than copied from the
+  internal one, which is in Chinese and points at scripts a reader here does not have.
+
+### Note on the vendor's pinned CUDA build
+
+The vendor pins `torch==1.12.1+cu113` at release v1.0.0. The cross-stack environment here uses
+cu116, because cu113 wheels do not run on this host's driver. Same PyTorch and MONAI versions,
+different CUDA build; the manuscript's M9 no longer claims a match.
+
 ## [Unreleased] — audit before going public (2026-09-18)
 
 The package had drifted about ten weeks behind the manuscript, through two revisions and two

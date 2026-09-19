@@ -26,11 +26,13 @@ reproduce these numbers end to end.
 Published values for CAC Plus v2.5.2 on the matched 205 (see the manuscript's M12
 for why 205 and not 206 or 207), for comparison:
     CCC 0.856 (95% CI 0.766-0.904) · ICC(A,1) 0.857 · quadratic-weighted kappa
-    0.734 (0.642-0.808) · CAC>0 sensitivity 71.8% (84/117) · mean difference -106.7
-    (95% LoA -872.9 to 659.5) · Pearson r 0.957 raw / 0.771 log / Spearman 0.756
-and for the unmodified vendor arm on the same 205: CCC 0.857 · mean difference -107.0
-(95% LoA -872.8 to 658.8). Drafts of the manuscript before 2026-09-19, and this
-docstring, carried -106.1 and -105.8; those were unreproducible and are superseded.
+    0.734 (0.642-0.808) · CAC>0 sensitivity 72.0% (85/118) · mean difference -106.10
+    (95% LoA -870.6 to 658.4) · Pearson r 0.957 raw / 0.769 log / Spearman 0.754
+and for the unmodified vendor arm on the same 206: CCC 0.857 · mean difference -106.36
+(95% LoA -870.5 to 657.8). The manuscript carried -105.8 for the vendor arm until
+2026-09-19; that one number was wrong. A repair the same day moved BOTH means onto a
+205-acquisition set, on the mistaken belief that one of the 206 had no expert reference;
+It has one, and -106.70/-106.97 are withdrawn. Use the released per-vessel reference table.
 
 Pass --vendor-scores to run the paired comparison of M13 rather than two separate
 panels, and --earlier-scores to run M8's set-equality and direction checks. Both
@@ -115,14 +117,13 @@ def pearson(x: np.ndarray, y: np.ndarray) -> float:
 def _average_ranks(v: np.ndarray) -> np.ndarray:
     """Ranks with ties averaged, as Spearman's rho requires.
 
-    Ties are not an edge case on this cohort: 88 of the matched 205 acquisitions
-    have an expert reference of exactly zero. Ranking them arbitrarily instead of
-    averaging gives rho = 0.762 where the correct value is 0.756 -- close enough
-    to look right, which is why this is a function and not one line inline.
-    (Until 2026-09-19 this comment read "88 of 206" and "0.734 where the correct
-    value is 0.754": both numbers were from a superseded denominator, and the
-    comparison ran the wrong way -- arbitrary ranking inflates rho here, it does
-    not deflate it. Recomputed on the matched 205.)
+    Ties are not an edge case on this cohort: 88 of the 206 acquisitions have an
+    expert reference of exactly zero. Ranking them arbitrarily instead of averaging
+    gives rho = 0.760 where the correct value is 0.754 -- close enough to look
+    right, which is why this is a function and not one line inline.
+    (This comment said "0.734 where the correct value is 0.754" until 2026-09-19:
+    0.754 was right, 0.734 was not, and the comparison ran the wrong way, since
+    arbitrary ranking inflates rho here rather than deflating it.)
     """
     order = np.argsort(v, kind="mergesort")
     ranks = np.empty(len(v), dtype=float)
@@ -222,24 +223,24 @@ def earlier_panel(ids, current, earlier, e_name) -> None:
 def selftest() -> int:
     """Exercise the paired code without any data.
 
-    The fixture is the manuscript's own shape: 205 acquisitions, the arms equal on
-    204, and one acquisition where arm A returns 229 and arm B 174. The identity
-    then has a known closed form, 55/205, which is what the manuscript reports.
+    The fixture is the manuscript's own shape: 206 acquisitions, the arms equal on
+    205, and one acquisition where arm A returns 229 and arm B 174. The identity
+    then has a known closed form, 55/206, which is what the manuscript reports.
     """
-    ids = [f"{i}A" for i in range(205)]
+    ids = [f"{i}A" for i in range(206)]
     rng = np.random.default_rng(0)
-    ref = {i: float(v) for i, v in zip(ids, rng.integers(0, 900, 205))}
+    ref = {i: float(v) for i, v in zip(ids, rng.integers(0, 900, 206))}
     arm_a = dict(ref)
     arm_b = dict(ref)
     arm_a["7A"], arm_b["7A"] = 229.0, 174.0
     paired_panel(ids, arm_a, ref, arm_b, "fixture")
-    expected = 55 / 205
+    expected = 55 / 206
     a = np.array([arm_a[i] for i in ids]); b = np.array([arm_b[i] for i in ids])
     g = np.array([ref[i] for i in ids])
     got = (a - g).mean() - (b - g).mean()
     assert abs(got - expected) < 1e-9, f"identity {got} != {expected}"
     earlier_panel(ids, arm_a, {i: min(arm_a[i], arm_b[i]) for i in ids}, "fixture")
-    print(f"\nselftest PASS: paired identity reproduces 55/205 = {expected:.7f}")
+    print(f"\nselftest PASS: paired identity reproduces 55/206 = {expected:.7f}")
     return 0
 
 
@@ -307,9 +308,8 @@ def main() -> int:
     print(f"  CAC>0 sensitivity / spec.    {sens:6.1f}% / {spec:.1f}%")
     # Section 3.1's separate claim: the automated zero rate exceeds the expert's,
     # which is the low-burden sensitivity gap stated there and referred back to
-    # from 3.7. Published for COCA non-gated on the matched 205: 52.7% scored vs
-    # 42.9% reference. (Was 52.4/42.7 until 2026-09-19 -- the 206 denominator,
-    # one of which carries no expert reference. See Online Methods M12.)
+    # from 3.7. Published for COCA non-gated: 52.4% scored vs 42.7% reference, on
+    # the 206 acquisitions both engines scored, all of which carry one (M12).
     print(f"  Zero-CAC rate, scored        {100 * (x == 0).mean():6.1f}%"
           f"   (\u00a73.1)")
     print(f"  Zero-CAC rate, reference     {100 * (g == 0).mean():6.1f}%")

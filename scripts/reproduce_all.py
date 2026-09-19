@@ -127,7 +127,7 @@ def build_checks(coca_scores, coca_reference, coca_vendor=None):
               note="bootstrap CIs of the median, 10,000 resamples, seed 42"),
         Check("paired-comparison selftest", "Online M13",
               ["analysis/agreement_panel.py", "--selftest"],
-              expect=["identity holds", "55/205 = 0.2682927", "selftest PASS"],
+              expect=["identity holds", "55/206 = 0.2669903", "selftest PASS"],
               note="M13's paired code on a fixture; no data needed"),
         Check("cohort manifest", "sec 2.3 / Tab 1",
               ["scripts/verify_cohort_manifest.py"],
@@ -140,17 +140,18 @@ def build_checks(coca_scores, coca_reference, coca_vendor=None):
             ["analysis/agreement_panel.py", "--scores", str(coca_scores),
              "--reference", str(coca_reference)]
             + (["--vendor-scores", str(coca_vendor)] if coca_vendor else []),
-            # Every published §3.1/§3.7 value for the CAC Plus arm, on the MATCHED
-            # 205 (§M12). Until 2026-09-19 this expected n = 206, 72.0%, 42.7% and
-            # -106.1 -- all values the manuscript had already corrected, so a reader
-            # who supplied correct data would have been told the check FAILED. An
-            # acceptance criterion is as much a published claim as the prose is, and
-            # it has to move when the claim does. Add --vendor-scores to the command
-            # to run M13's paired comparison on your own copy as well.
-            expect=["n = 205", "0.957", "0.756", "0.856", "0.734",
-                    "71.8%", "52.7%", "42.9%", "-106.7"],
+            # Every published §3.1/§3.7 value for the CAC Plus arm, on the 206
+            # acquisitions both engines scored -- all of which carry a COCA expert
+            # reference (§M12). This block was briefly rewritten to a 205 denominator
+            # on 2026-09-19 and is restored: the 205 came from a derived reference
+            # file that is missing one row, read as an acquisition with no reference.
+            # An acceptance criterion is as much a published claim as the prose is,
+            # so it has to move when the claim does -- and it has to move back when
+            # the claim does. Add --vendor-scores to run M13's paired comparison too.
+            expect=["n = 206", "0.957", "0.754", "0.856", "0.734",
+                    "72.0%", "52.4%", "42.7%", "-106.1"],
             needs=(coca_scores, coca_reference),
-            note="CCC 0.856, kappa 0.734, sens 71.8%, zero-CAC 52.7/42.9, bias -106.7"
+            note="CCC 0.856, kappa 0.734, sens 72.0%, zero-CAC 52.4/42.7, bias -106.1"
                  + (" + M13 paired" if coca_vendor else "")))
     else:
         checks.append(Check(

@@ -55,6 +55,26 @@ subset re-downloadable from TCIA / NCI Imaging Data Commons. Regenerate both wit
 `python scripts/build_cohort_manifests.py`; it asserts the 2,231 / 2,224 / 206 denominators against
 the manuscript and refuses to write a manifest that disagrees with the paper.
 
+### Which COCA file is the reference standard
+
+Use the release's own score table, `nongated_chest_ct/scores.xlsx`: 213 non-gated acquisitions
+with per-vessel LCA / LAD / LCX / RCA values and a total. Build your `--reference` CSV from its
+`filename` and `total` columns (ids look like `1A`, `195A`). On a handful of rows the four vessel
+values do not sum to the released total by a few Agatston; that is rounding in the release, and
+`total` is the column to use.
+
+**Do not build it from a derived comparison table.** Working through external review of this
+package we used two intermediate tables as the reference; one was missing two acquisitions and
+the other carried five extra. Both agreed with the release on every acquisition they held, so
+nothing looked wrong — the disagreement was entirely about which rows a file happens to contain.
+Reading one absent row as "this acquisition has no expert reference" moved the accuracy
+denominator from 206 to 205 and produced four wrong numbers in a manuscript revision. The release
+table is identifiable at a glance because it carries the per-vessel breakdown.
+
+The manuscript reports 207 of those 213: the other six were not in the scoring manifest assembled
+for that work (Online Methods M12b names them and shows the omission cannot move a stratum-level
+result). If you score all 213 your denominators will differ from the paper's, legitimately.
+
 ### What is deliberately not here: anything COCA-derived
 
 This repository publishes **no COCA data of any kind** — no case list, no reference values, and none of

@@ -47,7 +47,8 @@ EXPECT_EXACT_BY_VENDOR = {"SIEMENS": 266, "GE MEDICAL SYSTEMS": 8}
 # 1.25 split 48 / 2. Neither was checkable from the shipped manifest until a
 # reviewer pointed out it carried no batch column (2026-09-19). It does now, and
 # these assert what the paper claims.
-EXPECT_EXACT_BATCH = {"NLST_b3": 274}
+EXPECT_EXACT_BATCH = {"NLST_b3": 274}          # exactly 2.0: entirely batch 3
+EXPECT_NEAR_BATCH = {"NLST_b3": 278, "NLST_b12": 2}  # within 0.4%: two jitter cases are not
 EXPECT_MID_BATCH = {"NLST_b3": 48, "NLST_b12": 2}
 EXPECT_NEAR = 280           # within 0.4% of 2.0
 # The rest of the cohort, which the paper used to call a no-op wholesale.
@@ -126,6 +127,10 @@ def main() -> int:
     batch_mid = collections.Counter(r.get("nlst_batch", "?") for r in mid)
     print(f"batch of the exact-2.0 cases : {dict(batch_exact)}")
     print(f"batch of the ratio-1.25 cases: {dict(batch_mid)}")
+    batch_near = collections.Counter(r.get("nlst_batch", "?") for r in near)
+    print(f"batch of the within-0.4% cases: {dict(batch_near)}")
+    assert dict(batch_near) == EXPECT_NEAR_BATCH, (
+        f"the manuscript says the 0.4% bucket splits {EXPECT_NEAR_BATCH}; got {dict(batch_near)}")
     assert dict(batch_exact) == EXPECT_EXACT_BATCH, (
         f"the manuscript says all {EXPECT_EXACT}.exact-2.0 cases are in batch 3; got {dict(batch_exact)}")
     assert dict(batch_mid) == EXPECT_MID_BATCH, (

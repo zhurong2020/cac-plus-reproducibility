@@ -5,10 +5,11 @@ per-case vendor-naive vs CAC-Plus timings + byte-identity flag) and reproduces t
 headline speedup statistics and per-stratum medians.
 
 Expected: **median 1.97x, mean 2.67x, 50/50 byte-identical**; per-stratum medians
-1.09 / 2.48 / 5.07 / 4.69 / 5.53 (zero / 1-9 / 10-99 / 100-399 / >=400).
+1.01 / 2.28 / 5.07 / 4.69 / 5.53 (zero / 1-9 / 10-99 / 100-399 / >=400), n = 21 / 14 / 5 / 5 / 5,
+stratified on the CAC Plus v2.5.2 score.
 
 The 50-case cohort is deliberately stratified with 30 zero-CAC scans, whose masks hold
-~2 voxels; the Agatston step has almost nothing to do there (1.09x). The vectorised path
+~2 voxels; the Agatston step has almost nothing to do there (1.01x). The vectorised path
 earns its keep on the calcium-bearing strata (2.5-5.5x). Report the strata, not one median.
 
 ⚠️ Corrected 2026-07-09. The previous expected values (median 5.87x, per-stratum
@@ -36,6 +37,14 @@ CSV = Path(__file__).resolve().parents[1] / "results_expected" / "speedup_nlst_b
 STRATA = ["zero", "1-9", "10-99", "100-399", ">=400"]
 
 
+def _stratum(score: float) -> str:
+    if score == 0: return "zero"
+    if score < 10: return "1-9"
+    if score < 100: return "10-99"
+    if score < 400: return "100-399"
+    return ">=400"
+
+
 def main():
     sp, by_stratum, matches, n = [], defaultdict(list), 0, 0
     for r in csv.DictReader(open(CSV)):
@@ -45,7 +54,12 @@ def main():
             continue
         n += 1
         sp.append(ratio)
-        by_stratum[r["stratum"]].append(ratio)
+        # The CSV's own `stratum` column is derived from `ref_agatston`, the December
+        # 2025 release's score for the same case. Stratifying this engine's benchmark by
+        # a superseded version of that engine is circular, and it moves nine cases:
+        # 30/20 zero/positive under that column, 21/29 under the scores the paper
+        # reports. Stratify on `cac_plus_score`.
+        by_stratum[_stratum(float(r["cac_plus_score"]))].append(ratio)
         if r["scores_match_min1"].strip().lower() == "true":
             matches += 1
     sp = np.array(sp)

@@ -11,7 +11,11 @@ Agatston definition used (standard, area-weighted, normalised to 3 mm slice):
   - volume_mm3 = voxel_count * (sx * sy * sz / 3.0)
   - density_factor by the object's peak HU:
         130-199 -> 1 ; 200-299 -> 2 ; 300-399 -> 3 ; >=400 -> 4
-Objects with <= ``min_object_voxels`` voxels are dropped (vendor default = 1).
+Objects with <= ``min_object_voxels`` voxels are dropped. The vendor's own inference
+path applies 1: at release v1.0.0 ``compute_agatston_for_batch`` calls
+``compute_agatston_for_vol(..., 1)``. That function's own signature at the same tag
+defaults to 3, so "the vendor default" depends on which entry point you open. This
+package uses 1, the value the vendor pipeline applies and the one the paper reports.
 """
 from __future__ import annotations
 

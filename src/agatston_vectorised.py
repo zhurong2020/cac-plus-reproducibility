@@ -5,8 +5,11 @@ interpreted per-object loop with:
   - a single ``scipy.ndimage.label`` pass for connected components, and
   - ``numpy.bincount`` for per-object voxel counts,
 processing all objects with vectorised array operations. This is the source of the
-C2 speedup reported in the paper (median 2.87x synthetic / 5.87x real CT) with 100%
-Agatston identity to the reference.
+C2 speedup reported in the paper (median 2.87x synthetic / 1.97x real CT) with 100%
+Agatston identity to the reference. The 5.87x this docstring carried until 2026-09-19
+was withdrawn in manuscript v1.1.0: that benchmark passed the vendor an F-contiguous,
+transposed CT while the production scorer receives a C-contiguous buffer, and the vendor
+loop is strongly layout-sensitive.
 
 Ported from cardiac-ai-cac ``cac_scorer/core/processing_optimized.py``
 (``compute_agatston_optimized_tier1``), reduced to the scoring core.

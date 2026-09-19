@@ -109,7 +109,7 @@ def build_checks(coca_scores, coca_reference):
               note="freshly generated volumes, no data needed"),
         Check("Agatston-step speedup", "sec 3.3 (C2)",
               ["benchmarks/speedup_realct.py"],
-              expect=["50/50", "median 1.97x", "1.09x", "5.53x"],
+              expect=["50/50", "median 1.97x", "1.01x", "5.53x"],
               note="median 1.97x, 50/50 identical, per-stratum medians"),
         Check("axial-spacing audit", "sec 3.6 (C5)",
               ["analysis/spacing_audit.py"],

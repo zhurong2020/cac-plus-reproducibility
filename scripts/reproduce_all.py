@@ -4,7 +4,7 @@
     python scripts/reproduce_all.py                      # everything that needs no data
     python scripts/reproduce_all.py --coca-scores S.csv --coca-reference R.csv
 
-Four of the five checks need no data at all -- no images, no model weights, no
+Seven of the eight checks need no data at all -- no images, no model weights, no
 network. They run from the per-case result tables in results_expected/. Only the
 COCA agreement panel needs files you supply, because nothing COCA-derived may be
 redistributed (see README).
@@ -148,8 +148,19 @@ def build_checks(coca_scores, coca_reference, coca_vendor=None):
             # An acceptance criterion is as much a published claim as the prose is,
             # so it has to move when the claim does -- and it has to move back when
             # the claim does. Add --vendor-scores to run M13's paired comparison too.
-            expect=["n = 206", "0.957", "0.754", "0.856", "0.734",
-                    "72.0%", "52.4%", "42.7%", "-106.1"],
+            expect=["n = 206", "0.957", "0.769", "0.754", "0.856", "0.734",
+                    "72.0%", "52.4%", "42.7%", "-106.1", "-870.6 to 658.4"]
+                   # With the vendor arm supplied, the paired result is checked too:
+                   # the case set, the single discrepancy, the summed difference the
+                   # sign argument rests on, both arm means and the published interval.
+                   # Until 2026-09-19 the optional path added output and no criteria,
+                   # so a paired comparison could run and be accepted without any of
+                   # its published values being verified.
+                   + (["identifier intersection      206 of 206",
+                       "arms differ  1 of 206", "summed difference (A - B)           55 over n = 206",
+                       "mean difference, arm A       -106.0952",
+                       "mean difference, arm B       -106.3622",
+                       "-0.00010", "-0.00053"] if coca_vendor else []),
             needs=(coca_scores, coca_reference),
             note="CCC 0.856, kappa 0.734, sens 72.0%, zero-CAC 52.4/42.7, bias -106.1"
                  + (" + M13 paired" if coca_vendor else "")))

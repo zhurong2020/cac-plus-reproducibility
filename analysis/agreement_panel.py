@@ -9,7 +9,8 @@ and only the second pair describes agreement. Both are printed so the gap is
 visible rather than asserted.
 
 Run it twice, once per arm, to reproduce §3.7's finding that CAC Plus and the
-unmodified vendor differ on one acquisition of the 205 carrying a reference value,
+unmodified vendor differ on one acquisition of the 206 they both scored, every one of which
+carries a reference value,
 so their accuracy measures are near-identical by construction. The manuscript's M13
 reports the paired difference; the separate intervals below are not a test of it:
 
@@ -23,8 +24,8 @@ therefore come from your own COCA download -- see data/README.md. The scoring
 engine is here, so anyone registered for COCA can score their own copy and
 reproduce these numbers end to end.
 
-Published values for CAC Plus v2.5.2 on the matched 205 (see the manuscript's M12
-for why 205 and not 206 or 207), for comparison:
+Published values for CAC Plus v2.5.2 on the 206 both engines scored (see the manuscript's
+M12 and M12b for how that set is reconciled against the release's 213), for comparison:
     CCC 0.856 (95% CI 0.766-0.904) · ICC(A,1) 0.857 · quadratic-weighted kappa
     0.734 (0.642-0.808) · CAC>0 sensitivity 72.0% (85/118) · mean difference -106.10
     (95% LoA -870.6 to 658.4) · Pearson r 0.957 raw / 0.769 log / Spearman 0.754
@@ -43,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 import pathlib
 import sys
 
@@ -57,17 +59,53 @@ def stratum(value: float) -> int:
 
 
 def load(path: pathlib.Path, column: str) -> dict[str, float]:
+    """Read patient_id -> value, refusing the inputs that hide an incomplete file.
+
+    Until 2026-09-19 this silently overwrote duplicate identifiers and silently
+    dropped rows whose value would not parse, then reported only the surviving
+    count. Both behaviours conceal exactly the defect that produced the withdrawn
+    205 denominator in this paper's history: a file that is missing or doubling
+    rows still yields a plausible n. A count is not evidence of membership.
+    """
     with path.open() as fh:
         reader = csv.DictReader(fh)
         for needed in ("patient_id", column):
             if needed not in (reader.fieldnames or []):
                 sys.exit(f"{path.name}: needs a '{needed}' column, has {reader.fieldnames}")
-        out = {}
-        for row in reader:
-            try:
-                out[row["patient_id"].strip()] = float(row[column])
-            except (TypeError, ValueError):
+        out: dict[str, float] = {}
+        dupes, blanks, unparsable, nonfinite = [], 0, [], []
+        for lineno, row in enumerate(reader, 2):
+            pid = (row.get("patient_id") or "").strip()
+            if not pid:
+                blanks += 1
                 continue
+            raw = row.get(column)
+            try:
+                val = float(raw)
+            except (TypeError, ValueError):
+                unparsable.append(f"line {lineno} ({pid})")
+                continue
+            if not math.isfinite(val):
+                nonfinite.append(f"line {lineno} ({pid})")
+                continue
+            if pid in out:
+                dupes.append(pid)
+                continue
+            out[pid] = val
+
+    problems = []
+    if dupes:
+        problems.append(f"{len(dupes)} duplicate identifier(s), first {dupes[0]}")
+    if blanks:
+        problems.append(f"{blanks} row(s) with a blank patient_id")
+    if unparsable:
+        problems.append(f"{len(unparsable)} unparsable '{column}' value(s): "
+                        + ", ".join(unparsable[:5]))
+    if nonfinite:
+        problems.append(f"{len(nonfinite)} non-finite value(s): " + ", ".join(nonfinite[:5]))
+    if problems:
+        sys.exit(f"{path.name} is not usable as supplied:\n  - " + "\n  - ".join(problems)
+                 + "\nFix the file rather than letting the analysis run on what survived.")
     if not out:
         sys.exit(f"{path.name}: no usable rows.")
     return out
@@ -158,8 +196,9 @@ def paired_panel(ids, arm_a, reference, arm_b, b_name) -> None:
         print(f"  in arm A but not arm B       {len(dropped)}: {', '.join(dropped[:8])}"
               f"{' ...' if len(dropped) > 8 else ''}")
     if not common:
-        print("  no shared identifiers; paired comparison skipped")
-        return
+        sys.exit("  the two arms share no identifier, so the paired comparison you asked for "
+                 "was not performed. Until 2026-09-19 this printed a skip and returned "
+                 "normally, so a requested comparison that could not run still passed.")
 
     a = np.array([arm_a[i] for i in common])
     b = np.array([arm_b[i] for i in common])
@@ -175,6 +214,7 @@ def paired_panel(ids, arm_a, reference, arm_b, b_name) -> None:
     rhs = (a - b).sum() / len(common)
     print(f"  mean difference, arm A       {(a - g).mean():9.4f}")
     print(f"  mean difference, arm B       {(b - g).mean():9.4f}")
+    print(f"  summed difference (A - B)    {(a - b).sum():9.0f} over n = {len(common)}")
     print(f"  gap (A - B)                  {lhs:9.6f}   identity sum(A-B)/n = {rhs:.6f}")
     if abs(lhs - rhs) > 1e-9:
         sys.exit("  the paired-mean identity failed; the two arms are not on one case set")

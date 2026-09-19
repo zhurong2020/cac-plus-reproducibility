@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import csv
 import pathlib
+import random
 import statistics
 import sys
 
@@ -30,6 +31,15 @@ def clopper_pearson(k: int, n: int) -> tuple[float, float]:
     return 100 * lo, 100 * hi
 
 
+def bootstrap_ci(fn, values, n=10000, seed=42):
+    """Bootstrap 95% CI of a statistic. Same convention as analysis/speedup_intervals.py:
+    resample with replacement, n out of n, 10,000 replicates, seed 42, percentile interval."""
+    rng = random.Random(seed)
+    k = len(values)
+    reps = sorted(fn([values[rng.randrange(k)] for _ in range(k)]) for _ in range(n))
+    return reps[int(0.025 * n)], reps[int(0.975 * n)]
+
+
 def main() -> int:
     rows = list(csv.DictReader(CSV.open()))
     n = len(rows)
@@ -43,13 +53,25 @@ def main() -> int:
                      ("crosses the CAC = 0 line", zero)):
         lo, hi = clopper_pearson(k, n)
         print(f"{label:<30}: {k}/{n} = {100*k/n:.1f}%  exact 95% CI {lo:.1f}-{hi:.1f}%")
+    # The median and mean differences are NOT proportions, so they carry no binomial
+    # interval. R8 reports bootstrap CIs of the statistic, the same convention as the
+    # speedup medians (M12a). Until 2026-09-19 this script printed the point estimates
+    # and asserted them while R8 said "intervals here are exact (Clopper-Pearson)" --
+    # wording that spanned four quantities of two different kinds, and two intervals
+    # nothing here recomputed. Both are now computed and asserted.
+    med_lo, med_hi = bootstrap_ci(statistics.median, d)
+    mean_lo, mean_hi = bootstrap_ci(statistics.mean, d)
     print(f"absolute difference           : median {statistics.median(d):.0f}  "
-          f"mean {statistics.mean(d):.1f}  range {min(d):.0f}-{max(d):.0f}")
+          f"bootstrap 95% CI {med_lo:.0f}-{med_hi:.0f}")
+    print(f"                                mean {statistics.mean(d):.1f}  "
+          f"bootstrap 95% CI {mean_lo:.1f}-{mean_hi:.1f}  range {min(d):.0f}-{max(d):.0f}")
 
     checks = [("cases differing", differ, 58), ("reclassified", recat, 14),
               ("crossing zero", zero, 11), ("median absolute difference", statistics.median(d), 2),
               ("mean absolute difference", round(statistics.mean(d), 1), 4.6),
-              ("maximum difference", max(d), 40)]
+              ("maximum difference", max(d), 40),
+              ("median CI low", round(med_lo), 0), ("median CI high", round(med_hi), 3),
+              ("mean CI low", round(mean_lo, 1), 3.4), ("mean CI high", round(mean_hi, 1), 6.0)]
     bad = [f"{a}: got {b}, R8 says {c}" for a, b, c in checks if b != c]
     if bad:
         print("\nFAIL:\n  " + "\n  ".join(bad)); return 1

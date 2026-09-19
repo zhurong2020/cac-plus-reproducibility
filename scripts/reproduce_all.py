@@ -101,9 +101,9 @@ class Check:
         return "PASS", self.note, out
 
 
-def build_checks(coca_scores, coca_reference):
+def build_checks(coca_scores, coca_reference, coca_vendor=None):
     checks = [
-        Check("byte-identical Agatston", "sec 3.2 (C1)",
+        Check("exact Agatston agreement", "sec 3.2 (C1)",
               ["benchmarks/byte_identity_synthetic.py"],
               expect=["preserves the Agatston score exactly"],
               note="freshly generated volumes, no data needed"),
@@ -120,6 +120,15 @@ def build_checks(coca_scores, coca_reference):
               ["analysis/min_sensitivity.py"],
               expect=["58/100", "14/100", "11/100", "47.7-67.8"],
               note="58 differ, 14 reclassified, 11 cross zero; exact CIs"),
+        Check("speedup intervals", "sec 3.3 (C2)",
+              ["analysis/speedup_intervals.py"],
+              expect=["median 1.97x  95% CI 1.25-3.01x",
+                      "median 3.30x  95% CI 2.65-4.91x", "zero             21  median 1.01x"],
+              note="bootstrap CIs of the median, 10,000 resamples, seed 42"),
+        Check("paired-comparison selftest", "Online M13",
+              ["analysis/agreement_panel.py", "--selftest"],
+              expect=["identity holds", "55/205 = 0.2682927", "selftest PASS"],
+              note="M13's paired code on a fixture; no data needed"),
         Check("cohort manifest", "sec 2.3 / Tab 1",
               ["scripts/verify_cohort_manifest.py"],
               expect=["2231 NLST thin-slice acquisitions", "2231 distinct SeriesInstanceUIDs"],
@@ -129,14 +138,20 @@ def build_checks(coca_scores, coca_reference):
         checks.append(Check(
             "COCA agreement panel", "sec 3.1 + 3.7",
             ["analysis/agreement_panel.py", "--scores", str(coca_scores),
-             "--reference", str(coca_reference)],
-            # Every published §3.1/§3.7 value for the CAC Plus arm. If the reader
-            # supplies the vendor arm instead, CCC reads 0.857 and this check
-            # reports the difference rather than silently passing.
-            expect=["n = 206", "0.957", "0.754", "0.856", "0.857", "0.734",
-                    "72.0%", "52.4%", "42.7%", "-106.1"],
+             "--reference", str(coca_reference)]
+            + (["--vendor-scores", str(coca_vendor)] if coca_vendor else []),
+            # Every published §3.1/§3.7 value for the CAC Plus arm, on the MATCHED
+            # 205 (§M12). Until 2026-09-19 this expected n = 206, 72.0%, 42.7% and
+            # -106.1 -- all values the manuscript had already corrected, so a reader
+            # who supplied correct data would have been told the check FAILED. An
+            # acceptance criterion is as much a published claim as the prose is, and
+            # it has to move when the claim does. Add --vendor-scores to the command
+            # to run M13's paired comparison on your own copy as well.
+            expect=["n = 205", "0.957", "0.756", "0.856", "0.734",
+                    "71.8%", "52.7%", "42.9%", "-106.7"],
             needs=(coca_scores, coca_reference),
-            note="CCC 0.856, ICC 0.857, kappa 0.734, sens 72.0%, zero-CAC 52.4/42.7"))
+            note="CCC 0.856, kappa 0.734, sens 71.8%, zero-CAC 52.7/42.9, bias -106.7"
+                 + (" + M13 paired" if coca_vendor else "")))
     else:
         checks.append(Check(
             "COCA agreement panel", "sec 3.1 + 3.7",
@@ -153,11 +168,15 @@ def main() -> int:
                     help="your CAC Plus scores for COCA: patient_id + agatston_score")
     ap.add_argument("--coca-reference", type=pathlib.Path,
                     help="your COCA expert reference: patient_id + gt_total")
+    ap.add_argument("--coca-vendor-scores", type=pathlib.Path,
+                    help="your unmodified-vendor scores for COCA: patient_id + "
+                         "agatston_decoupled. Adds M13's paired comparison, which is the "
+                         "one the manuscript makes; without it the panel runs one arm only")
     ap.add_argument("-v", "--verbose", action="store_true",
                     help="print each check's full output")
     a = ap.parse_args()
 
-    checks = build_checks(a.coca_scores, a.coca_reference)
+    checks = build_checks(a.coca_scores, a.coca_reference, a.coca_vendor_scores)
     print(f"CAC Plus reproducibility package - {len(checks)} checks\n")
 
     results = []

@@ -5,6 +5,64 @@ All notable changes to this reproducibility package.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versions track the CAC Plus engine release they reproduce, suffixed `-repro`.
 
+## [v2.5.2-repro.2] — the verification tooling itself reviewed (2026-09-19)
+
+Round 4's sixth reviewer read this package rather than only the manuscript, and the two findings
+it marked Major were both here. They are the reason this release exists.
+
+### Fixed
+
+- 🔴 **The runner's COCA acceptance criteria were three corrections out of date.** The COCA check
+  required the panel to print `n = 206`, `72.0%`, `42.7%` and `-106.1` — every one a value the
+  manuscript had already superseded. A reader who scored their own COCA copy and **reproduced the
+  corrected results** would have been told the check FAILED. An acceptance criterion is a
+  published claim as much as a sentence is, and it has to move when the claim does. Now
+  `n = 205`, `71.8%`, `52.7%`, `42.9%`, `-106.7`.
+- 🔴 **Executing that branch then found two more superseded values in the paper.** Every earlier
+  run of `reproduce_all.py`, including reviewers', *skipped* the COCA check, because it needs
+  data the reader supplies. Run against real scores it printed a log-Pearson of 0.771 and a
+  Spearman ρ of 0.756 where the manuscript said 0.769 and 0.754. Neither published value is
+  reproducible from the matched 205 or from the 206 with the missing reference imputed as zero.
+  A check that is always skipped verifies nothing; passing 7 of 7 with one skip was not a green
+  build.
+- **`analysis/speedup_intervals.py` was not called by `reproduce_all.py`** although the manuscript
+  cited it as the provenance of every speedup interval. It is now check 5 of 8.
+- **The MONAI patch was described backwards.** `patches/monai_1.5.1_compatibility.patch` branches
+  on the installed MONAI version and **omits** `SwinUNETR(img_size=...)` on 1.5+; the README and
+  Online Methods M9 both said it "restores" the argument. Its target path
+  (`external/cac_plus_reference/ai_cac_inference_lib.py`) is not in this package either, so
+  `git apply` fails. The file now carries a header saying it is documentation of a change inside
+  the private toolkit, not a runnable step.
+- **`requirements.txt` was labelled "the modern stack every reported score was produced on".** It
+  is numpy and scipy with lower bounds — the analysis stack for this package. The scoring
+  environment (PyTorch 2.9.1+cu128, MONAI 1.5.1, vendor weights) is part of the deployment
+  toolkit this package does not distribute, and the README now says which is which.
+
+### Added
+
+- **`agreement_panel.py --vendor-scores`** — Online Methods M13's paired comparison, which the
+  script could not do: it computed one arm at a time, and two separate confidence intervals are
+  not a test of a difference. The paired path prints the explicit identifier intersection, the
+  paired ΔCCC (resampling acquisitions once per replicate so the arms stay paired), and asserts
+  the identity `mean(A−ref) − mean(B−ref) == sum(A−B)/n`, which fixes the **sign** of the gap
+  from the differing cases alone, without trusting either mean. That identity is what proved the
+  manuscript's published pair impossible.
+- **`agreement_panel.py --earlier-scores`** — M8's set-equality and direction checks.
+- **`agreement_panel.py --selftest`** — runs the paired code on a built-in fixture with no data,
+  so the COCA-dependent logic is exercised on every run. It reproduces 55/205 = 0.2682927.
+- **`reproduce_all.py --coca-vendor-scores`** — threads the second arm through to the panel.
+
+### Changed
+
+- 🔴 **`v2.5.2-repro` stops moving.** It was re-pointed four times during round 4, so it named no
+  fixed state — which matters most here, because the round's findings were about the verification
+  scripts themselves, and the reviewer had to quote a commit SHA to say what it had read. From
+  now the moving tag is frozen and each state gets an immutable identifier: **`v2.5.2-repro.1`**
+  at `27495c6` (what round 4 reviewed after its first pass) and **`v2.5.2-repro.2`** at this tip.
+  Subsequent repairs get `.3`, and no suffixed tag is ever re-pointed.
+- "byte-identical" is reserved for comparisons of arrays or file contents; equality of Agatston
+  scores is now called exact score agreement, in the runner's check names as in the manuscript.
+
 ## [v2.5.2-repro] — public, and corrected by three rounds of external review (2026-09-19)
 
 The repository went public on 2026-09-19. Four external reviewers then read the manuscript with

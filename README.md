@@ -140,10 +140,20 @@ found and corrected an inaccuracy in the manuscript — see `analysis/spacing_au
 
 ## Environments and troubleshooting
 
-- `requirements.txt` — the modern stack every reported score was produced on.
+- `requirements.txt` — **the analysis stack for this package only**: numpy and scipy, with
+  lower bounds rather than pins. Everything in `analysis/`, `benchmarks/` and `scripts/` runs
+  on it. It is *not* the stack the reported scores were produced on, and until 2026-09-19 this
+  line said it was. Scoring needs PyTorch, MONAI and the vendor weights; that environment is
+  `venv_py313` (Python 3.13.11, PyTorch 2.9.1+cu128, MONAI 1.5.1), described in Online
+  Methods M9, and it is part of the deployment toolkit this package does not distribute.
 - `requirements-vendor-frozen-cu116.txt` — the stack used for the cross-stack identity
   check (Online Methods M9). It matches the vendor's pinned PyTorch and MONAI versions
   but not its CUDA build; the reason is in `TROUBLESHOOTING.md`.
-- `patches/monai_1.5.1_compatibility.patch` — restores the `SwinUNETR(img_size=...)`
-  argument MONAI 1.5.1 removed, so the vendor's inference code runs on the modern stack.
+- `patches/monai_1.5.1_compatibility.patch` — **documentation of a change made inside the
+  private toolkit, not a patch you can apply here.** Its target path,
+  `external/cac_plus_reference/ai_cac_inference_lib.py`, is not in this package, and applying
+  it will fail. It is included because M9 refers to it: `SwinUNETR` dropped `img_size` in MONAI
+  1.5, so the code branches on the installed version and **omits** the argument on 1.5+ while
+  still passing it on 1.4. Earlier wording here and in M9 said it "restores" the argument,
+  which is the opposite of what the diff does.
 - `TROUBLESHOOTING.md` — the failures that actually occurred during this work.

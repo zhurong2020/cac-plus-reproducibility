@@ -26,8 +26,16 @@ reproduce these numbers end to end.
 Published values for CAC Plus v2.5.2 on the matched 205 (see the manuscript's M12
 for why 205 and not 206 or 207), for comparison:
     CCC 0.856 (95% CI 0.766-0.904) · ICC(A,1) 0.857 · quadratic-weighted kappa
-    0.734 (0.642-0.808) · CAC>0 sensitivity 71.8% (84/117) · mean difference -106.1
-    (95% LoA -870.6 to 658.4) · Pearson r 0.957 raw / 0.769 log / Spearman 0.754
+    0.734 (0.642-0.808) · CAC>0 sensitivity 71.8% (84/117) · mean difference -106.7
+    (95% LoA -872.9 to 659.5) · Pearson r 0.957 raw / 0.771 log / Spearman 0.756
+and for the unmodified vendor arm on the same 205: CCC 0.857 · mean difference -107.0
+(95% LoA -872.8 to 658.8). Drafts of the manuscript before 2026-09-19, and this
+docstring, carried -106.1 and -105.8; those were unreproducible and are superseded.
+
+Pass --vendor-scores to run the paired comparison of M13 rather than two separate
+panels, and --earlier-scores to run M8's set-equality and direction checks. Both
+print the explicit identifier intersection they used. `--selftest` exercises the
+paired code on a built-in fixture and needs no data at all.
 """
 from __future__ import annotations
 
@@ -129,16 +137,131 @@ def spearman(x: np.ndarray, y: np.ndarray) -> float:
     return pearson(_average_ranks(x), _average_ranks(y))
 
 
+def paired_panel(ids, arm_a, reference, arm_b, b_name) -> None:
+    """M13: the two engines compared as a paired quantity on ONE explicit case set.
+
+    Separate confidence intervals from two runs of this script are not a test of a
+    difference between the arms -- they can overlap when a paired difference is real
+    and fail to overlap when it is not. This is the comparison the manuscript makes.
+    """
+    common = sorted(set(ids) & set(arm_b))
+    print(f"\n--- M13 paired comparison against {b_name} ---")
+    print(f"  identifier intersection      {len(common)} of {len(ids)} (arm A n reference)"
+          f", {len(arm_b)} in arm B")
+    dropped = sorted(set(ids) - set(arm_b))
+    if dropped:
+        print(f"  in arm A but not arm B       {len(dropped)}: {', '.join(dropped[:8])}"
+              f"{' ...' if len(dropped) > 8 else ''}")
+    if not common:
+        print("  no shared identifiers; paired comparison skipped")
+        return
+
+    a = np.array([arm_a[i] for i in common])
+    b = np.array([arm_b[i] for i in common])
+    g = np.array([reference[i] for i in common])
+
+    differ = [i for i in common if arm_a[i] != arm_b[i]]
+    print(f"  acquisitions where the arms differ  {len(differ)} of {len(common)}"
+          + (f": {', '.join(differ[:8])}" if differ else ""))
+
+    # The identity that makes the SIGN checkable without trusting either mean:
+    # mean(a - g) - mean(b - g) == sum(a - b) / n, exactly, whatever the reference is.
+    lhs = (a - g).mean() - (b - g).mean()
+    rhs = (a - b).sum() / len(common)
+    print(f"  mean difference, arm A       {(a - g).mean():9.4f}")
+    print(f"  mean difference, arm B       {(b - g).mean():9.4f}")
+    print(f"  gap (A - B)                  {lhs:9.6f}   identity sum(A-B)/n = {rhs:.6f}")
+    if abs(lhs - rhs) > 1e-9:
+        sys.exit("  the paired-mean identity failed; the two arms are not on one case set")
+    print("  identity holds: the sign of the gap is fixed by the differing cases alone")
+
+    # Paired delta-CCC: resample acquisitions ONCE per replicate and recompute both
+    # arms on that same resample, so the arms stay paired inside the bootstrap.
+    rng = np.random.default_rng(42)
+    deltas = np.empty(10000)
+    n = len(common)
+    for r in range(10000):
+        k = rng.integers(0, n, n)
+        deltas[r] = ccc(a[k], g[k]) - ccc(b[k], g[k])
+    lo, hi = np.percentile(deltas, [2.5, 97.5])
+    print(f"  delta CCC (A - B)            {ccc(a, g) - ccc(b, g):9.5f}   "
+          f"(95% CI {lo:.5f} to {hi:.5f})")
+    ae = np.abs(a - g) - np.abs(b - g)
+    print(f"  paired absolute-error diff   median {np.median(ae):.1f}, "
+          f"nonzero on {int((ae != 0).sum())} of {n}")
+
+
+def earlier_panel(ids, current, earlier, e_name) -> None:
+    """M8: is the earlier release on the same case set, and is every change one-directional?"""
+    print(f"\n--- M8 earlier-release checks against {e_name} ---")
+    common = sorted(set(ids) & set(earlier))
+    only_cur, only_old = sorted(set(ids) - set(earlier)), sorted(set(earlier) - set(ids))
+    print(f"  identifier intersection      {len(common)}; "
+          f"current-only {len(only_cur)}, earlier-only {len(only_old)}")
+    print(f"  set equality                 {'YES' if not (only_cur or only_old) else 'NO'}"
+          "   <- M8 claims the three arms are on one case set")
+    if not common:
+        return
+    diff = [(i, earlier[i], current[i]) for i in common if earlier[i] != current[i]]
+    lower = sum(1 for _, o, c in diff if o < c)
+    print(f"  acquisitions that changed    {len(diff)} of {len(common)}")
+    print(f"  earlier score LOWER          {lower} of {len(diff)}"
+          f"   <- the only direction raising min_calc_object_pixels can produce")
+    if diff and lower != len(diff):
+        up = [i for i, o, c in diff if o > c]
+        print(f"  earlier score HIGHER         {len(up)}: {', '.join(up[:8])}"
+              "   <- inconsistent with the parameter explanation")
+    print("  direction-consistent is a NECESSARY condition, not an ablation: any other")
+    print("  change that could only lower a score is indistinguishable from it here.")
+
+
+def selftest() -> int:
+    """Exercise the paired code without any data.
+
+    The fixture is the manuscript's own shape: 205 acquisitions, the arms equal on
+    204, and one acquisition where arm A returns 229 and arm B 174. The identity
+    then has a known closed form, 55/205, which is what the manuscript reports.
+    """
+    ids = [f"{i}A" for i in range(205)]
+    rng = np.random.default_rng(0)
+    ref = {i: float(v) for i, v in zip(ids, rng.integers(0, 900, 205))}
+    arm_a = dict(ref)
+    arm_b = dict(ref)
+    arm_a["7A"], arm_b["7A"] = 229.0, 174.0
+    paired_panel(ids, arm_a, ref, arm_b, "fixture")
+    expected = 55 / 205
+    a = np.array([arm_a[i] for i in ids]); b = np.array([arm_b[i] for i in ids])
+    g = np.array([ref[i] for i in ids])
+    got = (a - g).mean() - (b - g).mean()
+    assert abs(got - expected) < 1e-9, f"identity {got} != {expected}"
+    earlier_panel(ids, arm_a, {i: min(arm_a[i], arm_b[i]) for i in ids}, "fixture")
+    print(f"\nselftest PASS: paired identity reproduces 55/205 = {expected:.7f}")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--scores", required=True, type=pathlib.Path,
+    ap.add_argument("--scores", type=pathlib.Path,
                     help="your scores: patient_id + the column named by --score-column")
-    ap.add_argument("--reference", required=True, type=pathlib.Path,
+    ap.add_argument("--reference", type=pathlib.Path,
                     help="your COCA expert reference: patient_id + gt_total")
     ap.add_argument("--score-column", default="agatston_score")
     ap.add_argument("--reference-column", default="gt_total")
+    ap.add_argument("--vendor-scores", type=pathlib.Path,
+                    help="second arm (the unmodified vendor); enables M13's paired comparison")
+    ap.add_argument("--vendor-column", default="agatston_decoupled")
+    ap.add_argument("--earlier-scores", type=pathlib.Path,
+                    help="an earlier release's scores; enables M8's set/direction checks")
+    ap.add_argument("--earlier-column", default="agatston_score")
+    ap.add_argument("--selftest", action="store_true",
+                    help="run the paired code on a built-in fixture; needs no data")
     a = ap.parse_args()
+
+    if a.selftest:
+        return selftest()
+    if not (a.scores and a.reference):
+        ap.error("--scores and --reference are required unless --selftest is given")
 
     scores = load(a.scores, a.score_column)
     reference = load(a.reference, a.reference_column)
@@ -189,6 +312,13 @@ def main() -> int:
         burden = np.array([reference[i] for i in missed])
         print(f"  Expert-positive, scored 0    {len(missed)} of {int((g > 0).sum())}"
               f"   (missed burden: median {np.median(burden):.0f}, max {burden.max():.0f})")
+
+    if a.vendor_scores:
+        paired_panel(ids, scores, reference,
+                     load(a.vendor_scores, a.vendor_column), a.vendor_scores.name)
+    if a.earlier_scores:
+        earlier_panel(ids, scores, load(a.earlier_scores, a.earlier_column),
+                      a.earlier_scores.name)
 
     print("\nReciprocal table (rows = reference stratum, columns = scored stratum):")
     table = np.zeros((4, 4), dtype=int)

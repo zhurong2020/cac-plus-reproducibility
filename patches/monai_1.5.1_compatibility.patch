@@ -1,3 +1,14 @@
+# Documentation, not an applicable patch for this package.
+#
+# Target path `external/cac_plus_reference/ai_cac_inference_lib.py` belongs to the CAC Plus
+# deployment toolkit, which is maintained separately and is not distributed here (see the
+# Code availability statement). `git apply` will fail against this repository; the diff is
+# shipped so that Online Methods M9's claim about the MONAI 1.5 migration can be read rather
+# than taken on trust.
+#
+# What it does: MONAI 1.5 removed `SwinUNETR(img_size=...)`. The code branches on the
+# installed MONAI version and OMITS the argument on 1.5+, while still passing it on 1.4.
+# It does not restore or reintroduce the argument.
 --- a/external/cac_plus_reference/ai_cac_inference_lib.py
 +++ b/external/cac_plus_reference/ai_cac_inference_lib.py
 @@ -132,12 +132,32 @@

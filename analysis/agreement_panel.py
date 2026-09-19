@@ -9,7 +9,9 @@ and only the second pair describes agreement. Both are printed so the gap is
 visible rather than asserted.
 
 Run it twice, once per arm, to reproduce §3.7's finding that CAC Plus and the
-unmodified vendor are statistically indistinguishable on every measure:
+unmodified vendor differ on one acquisition of the 205 carrying a reference value,
+so their accuracy measures are near-identical by construction. The manuscript's M13
+reports the paired difference; the separate intervals below are not a test of it:
 
     python analysis/agreement_panel.py --scores my_cacplus.csv  --reference my_coca_gt.csv
     python analysis/agreement_panel.py --scores my_vendor.csv   --reference my_coca_gt.csv
@@ -21,9 +23,10 @@ therefore come from your own COCA download -- see data/README.md. The scoring
 engine is here, so anyone registered for COCA can score their own copy and
 reproduce these numbers end to end.
 
-Published values for CAC Plus v2.5.2 (n = 206), for comparison:
+Published values for CAC Plus v2.5.2 on the matched 205 (see the manuscript's M12
+for why 205 and not 206 or 207), for comparison:
     CCC 0.856 (95% CI 0.766-0.904) · ICC(A,1) 0.857 · quadratic-weighted kappa
-    0.734 (0.640-0.808) · CAC>0 sensitivity 72.0% · mean difference -106.1
+    0.734 (0.642-0.808) · CAC>0 sensitivity 71.8% (84/117) · mean difference -106.1
     (95% LoA -870.6 to 658.4) · Pearson r 0.957 raw / 0.769 log / Spearman 0.754
 """
 from __future__ import annotations

@@ -1,8 +1,18 @@
 """Reference (naive) Agatston implementation.
 
 This is the straightforward, un-optimised computation of the Agatston score from a
-Hounsfield-unit volume and a binary calcium mask. It mirrors the vendor VA AI-CAC
-per-voxel reference logic (Hagopian et al., MIT-licensed) and is used only to
+Hounsfield-unit volume and a binary calcium mask.
+
+**This is our transcription of the vendor's logic, not the vendor's code.** It
+reproduces what `compute_agatston_for_vol` does at tag v1.0.0 -- label connected
+objects in three dimensions, take each object's peak HU, weight a voxel count by the
+density factor -- but it is a re-implementation, so the byte-identity benchmark in
+this package establishes that the vectorised path agrees with *this* reference, not
+that it agrees with the vendor's own file. The manuscript's C1 result was produced
+against the vendor's actual code, vendored into the private engine; a reader who
+wants that comparison should run it against `Raffi-Hagopian/AI-CAC` at v1.0.0
+directly. Earlier versions of this docstring said the logic is "per-voxel", which
+is wrong about the vendor: its loop is per connected object. Used only to
 demonstrate that the vectorised implementation in ``agatston_vectorised`` produces
 byte-identical scores while running faster.
 

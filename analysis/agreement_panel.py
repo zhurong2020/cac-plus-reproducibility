@@ -115,10 +115,14 @@ def pearson(x: np.ndarray, y: np.ndarray) -> float:
 def _average_ranks(v: np.ndarray) -> np.ndarray:
     """Ranks with ties averaged, as Spearman's rho requires.
 
-    Ties are not an edge case on this cohort: 88 of 206 acquisitions have an
-    expert reference of exactly zero. Ranking them arbitrarily instead of
-    averaging gives rho = 0.734 where the correct value is 0.754 -- close enough
+    Ties are not an edge case on this cohort: 88 of the matched 205 acquisitions
+    have an expert reference of exactly zero. Ranking them arbitrarily instead of
+    averaging gives rho = 0.762 where the correct value is 0.756 -- close enough
     to look right, which is why this is a function and not one line inline.
+    (Until 2026-09-19 this comment read "88 of 206" and "0.734 where the correct
+    value is 0.754": both numbers were from a superseded denominator, and the
+    comparison ran the wrong way -- arbitrary ranking inflates rho here, it does
+    not deflate it. Recomputed on the matched 205.)
     """
     order = np.argsort(v, kind="mergesort")
     ranks = np.empty(len(v), dtype=float)
@@ -303,7 +307,9 @@ def main() -> int:
     print(f"  CAC>0 sensitivity / spec.    {sens:6.1f}% / {spec:.1f}%")
     # Section 3.1's separate claim: the automated zero rate exceeds the expert's,
     # which is the low-burden sensitivity gap stated there and referred back to
-    # from 3.7. Published for COCA non-gated: 52.4% scored vs 42.7% reference.
+    # from 3.7. Published for COCA non-gated on the matched 205: 52.7% scored vs
+    # 42.9% reference. (Was 52.4/42.7 until 2026-09-19 -- the 206 denominator,
+    # one of which carries no expert reference. See Online Methods M12.)
     print(f"  Zero-CAC rate, scored        {100 * (x == 0).mean():6.1f}%"
           f"   (\u00a73.1)")
     print(f"  Zero-CAC rate, reference     {100 * (g == 0).mean():6.1f}%")

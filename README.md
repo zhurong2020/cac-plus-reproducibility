@@ -137,3 +137,13 @@ against the current manuscript before being made public, which found a stale jou
 a retracted speedup figure in this README, analyses belonging to a section the manuscript no
 longer contains, and internal case identifiers in a shipped result table. The same audit
 found and corrected an inaccuracy in the manuscript — see `analysis/spacing_audit.py`.
+
+## Environments and troubleshooting
+
+- `requirements.txt` — the modern stack every reported score was produced on.
+- `requirements-vendor-frozen-cu116.txt` — the stack used for the cross-stack identity
+  check (Online Methods M9). It matches the vendor's pinned PyTorch and MONAI versions
+  but not its CUDA build; the reason is in `TROUBLESHOOTING.md`.
+- `patches/monai_1.5.1_compatibility.patch` — restores the `SwinUNETR(img_size=...)`
+  argument MONAI 1.5.1 removed, so the vendor's inference code runs on the modern stack.
+- `TROUBLESHOOTING.md` — the failures that actually occurred during this work.

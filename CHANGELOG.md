@@ -5,6 +5,45 @@ All notable changes to this reproducibility package.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versions track the CAC Plus engine release they reproduce, suffixed `-repro`.
 
+## [v2.5.2-repro.3] — the 206 denominator restored (2026-09-19)
+
+**Cite this tag, not `.2`.** `.2`'s acceptance criteria carry a denominator that was withdrawn
+hours after it was tagged, so a reader who clones `.2` and reproduces the corrected results is
+told the check failed. `.2` is left in place because an immutable tag that has been published is
+not re-pointed; it is simply superseded.
+
+### Fixed
+
+- 🔴 **The 205 denominator was wrong and came from an incomplete file.** `.2` moved the COCA
+  acceptance criteria to a 205-acquisition set, on the belief that one of the 206 jointly scored
+  acquisitions had no expert reference. It has one. The file used as the reference was a derived
+  three-way comparison table missing that row; its absence was read as a missing reference rather
+  than a missing row. Verified against the source cohort's own released score table: **207 of 207
+  expert values agree exactly, 0 mismatches.** Restored: `n = 206`, `72.0%`, `52.4%`, `42.7%`,
+  `-106.1`, Spearman `0.754`.
+- **The paired selftest fixture and its identity move to 55/206** = 0.2669903, which the real
+  data reproduces to seven decimals.
+- **The tie-handling comment was half right and stating its comparison backwards.** It said
+  arbitrary ranking gives rho = 0.734 where the correct value is 0.754. 0.754 was right; 0.734
+  was not; and arbitrary ranking *inflates* rho here (0.760), it does not deflate it.
+- The zero-rate comment still quoted the 206-denominator pair from before the engine rebaseline.
+
+### Added
+
+- **`data/README` now says which COCA file is the reference standard** and why it matters: build
+  `--reference` from the release's own score table, not from a derived comparison table. Two
+  intermediate tables used during this work hold different row sets — one missing two rows, one
+  carrying five extra — and both agree with the release on every row they do hold, so nothing
+  looks wrong until you count. The release table is identifiable at a glance because it carries
+  the per-vessel breakdown.
+- A note that the manuscript scores 207 of the release's 213, so a reader who scores all 213
+  knows why their denominators differ.
+
+### Changed
+
+- The README's format example no longer uses literal case identifiers. This package ships no
+  COCA content and its documentation should not either.
+
 ## [v2.5.2-repro.2] — the verification tooling itself reviewed (2026-09-19)
 
 Round 4's sixth reviewer read this package rather than only the manuscript, and the two findings

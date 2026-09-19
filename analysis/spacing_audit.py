@@ -43,6 +43,12 @@ MANIFEST = pathlib.Path(__file__).resolve().parents[1] / "results_expected" / "n
 
 EXPECT_EXACT = 274          # §3.6: 266 Siemens + 8 GE Medical Systems
 EXPECT_EXACT_BY_VENDOR = {"SIEMENS": 266, "GE MEDICAL SYSTEMS": 8}
+# The manuscript says the 274 are "all in NLST batch 3" and that the 50 at ratio
+# 1.25 split 48 / 2. Neither was checkable from the shipped manifest until a
+# reviewer pointed out it carried no batch column (2026-09-19). It does now, and
+# these assert what the paper claims.
+EXPECT_EXACT_BATCH = {"NLST_b3": 274}
+EXPECT_MID_BATCH = {"NLST_b3": 48, "NLST_b12": 2}
 EXPECT_NEAR = 280           # within 0.4% of 2.0
 # The rest of the cohort, which the paper used to call a no-op wholesale.
 EXPECT_MID = 50             # GE, ratio 1.15-1.50
@@ -115,6 +121,15 @@ def main() -> int:
         for f in fails:
             print(f"  {f}")
         return 1
+
+    batch_exact = collections.Counter(r.get("nlst_batch", "?") for r in exact)
+    batch_mid = collections.Counter(r.get("nlst_batch", "?") for r in mid)
+    print(f"batch of the exact-2.0 cases : {dict(batch_exact)}")
+    print(f"batch of the ratio-1.25 cases: {dict(batch_mid)}")
+    assert dict(batch_exact) == EXPECT_EXACT_BATCH, (
+        f"the manuscript says all {EXPECT_EXACT}.exact-2.0 cases are in batch 3; got {dict(batch_exact)}")
+    assert dict(batch_mid) == EXPECT_MID_BATCH, (
+        f"the manuscript says the ratio-1.25 cases split {EXPECT_MID_BATCH}; got {dict(batch_mid)}")
 
     print("\nPASS: every count matches the published values.")
     return 0

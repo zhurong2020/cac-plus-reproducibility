@@ -58,7 +58,7 @@ manuscript reports and the runner fails if the output does not contain them.
 Each script also still runs on its own, and prints more than the runner shows:
 
 ```bash
-python benchmarks/byte_identity_synthetic.py   # C1  -> 100/100 byte-identical Agatston
+python benchmarks/byte_identity_synthetic.py   # C1  -> 100/100 identical Agatston scores
 python benchmarks/speedup_realct.py            # C2  -> median 1.97x, 50/50 identical
 python analysis/spacing_audit.py               # C5  -> 274 at ratio exactly 2.0
 python scripts/verify_cohort_manifest.py       # Table 1 -> n = 2,231

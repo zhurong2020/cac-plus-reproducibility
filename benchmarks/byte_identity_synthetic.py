@@ -1,4 +1,7 @@
-"""Self-contained byte-identity + speedup demonstration (manuscript §3.2 / §3.3, Figure 3a).
+"""Self-contained exact-score-agreement + speedup demonstration (manuscript §3.2 / §3.3, Figure 3a).
+
+The file name keeps its original spelling so the runner and the manuscript keep resolving;
+the endpoint it measures is equality of the returned Agatston scores, not of bytes (§M3).
 
 Generates synthetic Hounsfield-unit volumes with random calcified blobs (NO patient
 data required), scores each with BOTH the vectorised (CAC Plus) and the naive (vendor
@@ -6,7 +9,7 @@ reference) Agatston implementations, and checks that every case produces an iden
 score while the vectorised path runs faster.
 
 This demonstrates that the CAC Plus optimisation preserves the Agatston result exactly.
-The paper's 100/100 byte-identity and 2.87x median speedup were measured on the full
+The paper's 100/100 exact score agreement and 2.87x median speedup were measured on the full
 synthetic benchmark (results_expected/byte_identity_synthetic.csv); this script
 reproduces the same property on freshly generated volumes.
 """
@@ -51,7 +54,7 @@ def main(n_cases=100):
             matches += 1
         else:
             print(f"  MISMATCH case {i}: naive={s_naive} vectorised={s_vec}")
-    print(f"Byte-identity : {matches}/{n_cases} identical")
+    print(f"Exact score agreement : {matches}/{n_cases} identical")
     assert matches == n_cases, "vectorised and naive Agatston diverged"
     print("OK — the vectorised optimisation preserves the Agatston score exactly.")
     print("Note: the C2 speedup *magnitude* (median 2.87x synthetic / 1.97x real CT) grows")

@@ -38,9 +38,9 @@ weights/
 
 | File | Rows | Contents |
 |---|---|---|
-| `nlst_cohort_manifest.csv` | 4,455 | **cohort manifest** — one row per scored acquisition (2,231 thin + 2,224 thick) with `selected_series_uid`, study date, manufacturer, kernel, thickness, slice count, and our Agatston score |
-| `speedup_nlst_b3_50case.csv` | 50 | per-case vendor-naive vs CAC-Plus timings + byte-identity flag |
-| `byte_identity_synthetic.csv` | 100 | synthetic-CT byte-identity benchmark (vendor vs optimised score) |
+| `nlst_cohort_manifest.csv` | 2,231 | **cohort manifest** — one row per scored thin-slice acquisition. It described 4,455 rows (thin plus thick) until 2026-09-20; the paired thick arm left the manuscript with §3.6 and the shipped file is thin only with `selected_series_uid`, study date, manufacturer, kernel, thickness, slice count, and our Agatston score |
+| `speedup_nlst_b3_50case.csv` | 50 | per-case vendor-naive vs CAC-Plus timings + score-agreement flag |
+| `byte_identity_synthetic.csv` | 100 | synthetic-CT exact-score-agreement benchmark (vendor reference vs optimised) |
 
 All rows are de-identified: dataset-native case identifiers (numeric for NLST, e.g. `100029`;
 alphanumeric for COCA, e.g. `1A`), acquisition parameters, and derived scores. No images, no PHI,
@@ -74,9 +74,11 @@ The identifiers are NLST's own numeric case identifiers, as elsewhere in this pa
 
 Use the release's own score table, `nongated_chest_ct/scores.xlsx`: 213 non-gated acquisitions
 with per-vessel LCA / LAD / LCX / RCA values and a total. Build your `--reference` CSV from its
-`filename` and `total` columns (the identifier is a number followed by `A`). On a handful of rows the four vessel
-values do not sum to the released total by a few Agatston; that is rounding in the release, and
-`total` is the column to use.
+`filename` and `total` columns (the identifier is a number followed by `A`). On 49 of the 207 rows this paper uses, the four
+vessel values do not sum to the released total — median 0.30 Agatston, six above 1, largest 42.15.
+A draft here called that rounding; tested against the precision the release displays, only 20 of
+the 49 fall within a rounding bound, so **the cause is unresolved**. Use the `total` column as
+released; no analysis in the manuscript sums the vessel columns.
 
 **Do not build it from a derived comparison table.** Working through external review of this
 package we used two intermediate tables as the reference; one was missing two acquisitions and

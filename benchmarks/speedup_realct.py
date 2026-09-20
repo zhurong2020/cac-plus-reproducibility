@@ -1,10 +1,10 @@
 """Reproduce the C2 real-CT speedup summary (manuscript §3.3, Figure 3b/c).
 
 Reads results_expected/speedup_nlst_b3_50case.csv (the 50-case NLST batch 3 benchmark:
-per-case vendor-naive vs CAC-Plus timings + byte-identity flag) and reproduces the
+per-case vendor-naive vs CAC-Plus timings + score-agreement flag) and reproduces the
 headline speedup statistics and per-stratum medians.
 
-Expected: **median 1.97x, mean 2.67x, 50/50 byte-identical**; per-stratum medians
+Expected: **median 1.97x, mean 2.67x, 50/50 identical scores**; per-stratum medians
 1.01 / 2.28 / 5.07 / 4.69 / 5.53 (zero / 1-9 / 10-99 / 100-399 / >=400), n = 21 / 14 / 5 / 5 / 5,
 stratified on the CAC Plus v2.5.2 score.
 
@@ -64,7 +64,7 @@ def main():
             matches += 1
     sp = np.array(sp)
     print(f"n cases          : {n}")
-    print(f"byte-identity    : {matches}/{n}")
+    print(f"score agreement  : {matches}/{n}")
     print(f"speedup (real CT): median {np.median(sp):.2f}x  mean {sp.mean():.2f}x  max {sp.max():.2f}x")
     print("per-stratum median speedup:")
     for k in STRATA:

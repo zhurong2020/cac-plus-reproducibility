@@ -161,7 +161,10 @@ def build_checks(coca_scores, coca_reference, coca_vendor=None):
             # so it has to move when the claim does -- and it has to move back when
             # the claim does. Add --vendor-scores to run M13's paired comparison too.
             expect=["n = 206", "0.957", "0.769", "0.754", "0.856", "0.734",
-                    "72.0%", "52.4%", "42.7%", "-106.1", "-870.6 to 658.4"]
+                    # Specificity is published (main text, Table S9) and was not asserted
+                    # here; verified against real COCA data 2026-09-20 before adding.
+                    "72.0% / 85.2%",
+                    "52.4%", "42.7%", "-106.1", "-870.6 to 658.4"]
                    # With the vendor arm supplied, the paired result is checked too:
                    # the case set, the single discrepancy, the summed difference the
                    # sign argument rests on, both arm means and the published interval.
@@ -172,7 +175,11 @@ def build_checks(coca_scores, coca_reference, coca_vendor=None):
                        "arms differ  1 of 206", "summed difference (A - B)           55 over n = 206",
                        "mean difference, arm A       -106.0952",
                        "mean difference, arm B       -106.3622",
-                       "-0.00010", "-0.00053"] if coca_vendor else []),
+                       # The published interval is -0.00053 to +0.00000. Only the point
+                       # estimate and the LOWER bound were asserted, so the interval width
+                       # was unchecked; the upper bound is published too. All three
+                       # reproduced from real COCA data 2026-09-20 before being added here.
+                       "-0.00010", "-0.00053 to 0.00000"] if coca_vendor else []),
             needs=(coca_scores, coca_reference),
             note="CCC 0.856, kappa 0.734, sens 72.0%, zero-CAC 52.4/42.7, bias -106.1"
                  + (" + M13 paired" if coca_vendor else "")))

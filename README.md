@@ -68,6 +68,26 @@ python analysis/agreement_panel.py --scores yours.csv --reference your_coca_gt.c
                                                # 3.7 -> CCC 0.856, ICC 0.857, kappa 0.734
 ```
 
+## Three levels of verifiability
+
+Not every claim in the paper is checkable the same way, and collapsing that into "reproducible"
+or not is what an earlier version of this README did. Online Methods M17 carries the full
+claim-by-claim table; the summary is:
+
+| Level | Meaning | Rows here |
+|---|---|---|
+| **1 · re-measured** | the check generates its own inputs and measures; nothing is read from disk | synthetic score agreement, the paired fixture, the injection tests |
+| **2 · recomputed** | the published numbers are recomputed from per-acquisition tables shipped here. This confirms the arithmetic over our measurement; it does **not** re-make the measurement | full-cohort NLST agreement, real-CT speedup intervals, the spacing partition, the parameter sweep, the cohort manifest, callee provenance |
+| **3 · restricted** | needs data this repository cannot ship | everything COCA (fidelity, accuracy, the paired interval), the historical comparison, the private format pipeline (C3) and the deployment incident records (C4) |
+
+A level-2 check is only worth its green line if it is capable of a red one, which is what
+`tests/test_analysis_mutations.py` establishes: fourteen perturbations of the shipped tables,
+each required to make a check fail.
+
+**Note on wording.** Level-2 checks need *no additional download* — not *no data*. They read
+de-identified NLST per-acquisition score tables that this repository ships on purpose. It ships
+no images, and nothing COCA-derived at all.
+
 ## What reproduces what
 
 | Script | Manuscript | Reproduces |

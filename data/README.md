@@ -89,8 +89,13 @@ denominator from 206 to 205 and produced four wrong numbers in a manuscript revi
 table is identifiable at a glance because it carries the per-vessel breakdown.
 
 The manuscript reports 207 of those 213: the other six were not in the scoring manifest assembled
-for that work (Online Methods M12b names them and shows the omission cannot move a stratum-level
-result). If you score all 213 your denominators will differ from the paper's, legitimately.
+for that work. An earlier draft of Online Methods M12b said their omission "cannot move a
+stratum-level result"; **that was withdrawn**. Four of the six are reference-positive and would
+enter the sensitivity denominator and two are reference-zero and would enter specificity, and
+their predictions are unknown because they were never scored — so performance on the six is
+**unmeasured**, which is a different statement from unaffected. A low reference value does not
+constrain a prediction: this paper's own divergent acquisition has reference 0 and predictions of
+229 and 174. If you score all 213 your denominators will differ from the paper's, legitimately.
 
 ### What is deliberately not here: anything COCA-derived
 

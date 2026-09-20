@@ -237,14 +237,25 @@ def paired_panel(ids, arm_a, reference, arm_b, b_name) -> None:
 
 
 def earlier_panel(ids, current, earlier, e_name) -> None:
-    """M8: is the earlier release on the same case set, and is every change one-directional?"""
+    """M8: is the earlier-release arm a subset of the accuracy set, and every change one-directional?
+
+    Not "the same case set". M8 said that until 2026-09-19 and it was corrected: the
+    earlier-release arm holds 205 of the 206, every one of them inside the accuracy set, with one
+    acquisition scored only after that release and therefore carrying no earlier value. So the
+    expected result here is a 205-of-206 **subset**, not set equality -- and this panel printing
+    "set equality NO" is the correct outcome, not a failure.
+    """
     print(f"\n--- M8 earlier-release checks against {e_name} ---")
     common = sorted(set(ids) & set(earlier))
     only_cur, only_old = sorted(set(ids) - set(earlier)), sorted(set(earlier) - set(ids))
     print(f"  identifier intersection      {len(common)}; "
           f"current-only {len(only_cur)}, earlier-only {len(only_old)}")
-    print(f"  set equality                 {'YES' if not (only_cur or only_old) else 'NO'}"
-          "   <- M8 claims the three arms are on one case set")
+    subset = not only_old
+    print(f"  earlier arm is a subset      {'YES' if subset else 'NO'}"
+          "   <- M8's claim since 2026-09-19: every earlier score is inside the accuracy set")
+    if only_cur:
+        print(f"  accuracy-only acquisitions   {len(only_cur)}"
+              "   <- scored after the earlier release; expected, not a defect")
     if not common:
         return
     diff = [(i, earlier[i], current[i]) for i in common if earlier[i] != current[i]]
@@ -279,8 +290,22 @@ def selftest() -> int:
     g = np.array([ref[i] for i in ids])
     got = (a - g).mean() - (b - g).mean()
     assert abs(got - expected) < 1e-9, f"identity {got} != {expected}"
-    earlier_panel(ids, arm_a, {i: min(arm_a[i], arm_b[i]) for i in ids}, "fixture")
-    print(f"\nselftest PASS: paired identity reproduces 55/206 = {expected:.7f}")
+    # The earlier-release arm has the manuscript's real shape: 205 of the 206, one acquisition
+    # scored only after that release. A fixture that hands it all 206 never exercises the subset
+    # branch, and an unexercised branch verifies nothing -- the lesson that produced this panel's
+    # selftest in the first place.
+    # Withhold an acquisition that is NOT the differing one, so the subset branch and the
+    # direction check are both exercised. Withholding "7A" would leave nothing changed and the
+    # direction check would pass on an empty set -- a green line that verifies nothing.
+    withheld = "205A"
+    earlier = {i: min(arm_a[i], arm_b[i]) for i in ids if i != withheld}
+    earlier_panel(ids, arm_a, earlier, "fixture")
+    assert len(earlier) == 205, f"earlier fixture is {len(earlier)}, should be 205 of 206"
+    assert not set(earlier) - set(ids), "earlier fixture must be a subset of the accuracy set"
+    assert sum(1 for i in earlier if earlier[i] != arm_a[i]) == 1, \
+        "the fixture must retain one differing acquisition or the direction check is vacuous"
+    print(f"\nselftest PASS: paired identity reproduces 55/206 = {expected:.7f};"
+          f" earlier arm is a {len(earlier)}-of-{len(ids)} subset, as M8 states")
     return 0
 
 

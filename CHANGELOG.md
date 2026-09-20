@@ -5,6 +5,75 @@ All notable changes to this reproducibility package.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versions track the CAC Plus engine release they reproduce, suffixed `-repro`.
 
+## [v2.5.2-repro.7] — the package says what the manuscript says (2026-09-20)
+
+Round six of external review found the package still asserting three things the manuscript had
+withdrawn or corrected, and the runner asserting less than the manuscript publishes.
+
+### Fixed
+
+- **`data/README.md`** no longer says the six omitted COCA acquisitions "cannot move a
+  stratum-level result". That was withdrawn: four are reference-positive and two reference-zero,
+  their predictions were never computed, so performance on them is **unmeasured** — a different
+  statement from unaffected. A low reference does not constrain a prediction.
+- **`analysis/agreement_panel.py`**: `earlier_panel()` no longer claims the three arms share one
+  case set. The earlier-release arm is a **205-of-206 subset**; one acquisition was scored only
+  after that release. The panel now reports subset membership and says an accuracy-only
+  acquisition is expected rather than a defect.
+- **The selftest fixture was handing `earlier_panel()` all 206**, so the subset branch had never
+  executed. It now withholds one acquisition — deliberately not the differing one, or the
+  direction check would pass on an empty set — and asserts both properties.
+
+### Changed
+
+- **The COCA acceptance criteria now include the ΔCCC upper bound and the published
+  specificity.** Both are published values that nothing asserted; the interval width was
+  unchecked. Both were verified against the real COCA arms **before** being added, not copied
+  from the manuscript. That run also settled a value our own records disagreed about: the
+  released panel returns a lower bound of −0.00053, not the −0.00054 one internal ledger
+  claimed. All eleven checks now pass together with real data for the first time.
+- **`README.md`** gains the three-level verifiability summary mirrored from Online Methods M17
+  (re-measured / recomputed / restricted), and states that level-2 checks need **no additional
+  download** rather than "no data" — they read de-identified NLST per-acquisition tables this
+  repository ships on purpose.
+
+## [v2.5.2-repro.6] — tests for the tests, and provenance that names the callee (2026-09-20)
+
+Nothing had ever asked whether a check notices a wrong table. External review perturbed
+`identity_nlst_full_n2231.csv` four ways and the checker returned success on **three**.
+
+### Added
+
+- **`tests/mutate.py`** — a shared injection-test fixture, so adding one to a new check costs a
+  few lines. Two properties are enforced rather than remembered, because the first attempt to
+  reproduce that report got the wrong answer by writing a mutated file without closing it: the
+  **unmutated control must pass** before any mutation result is read, and a mutation that does
+  not change the bytes is reported as **vacuous**, not as caught.
+- **`tests/test_analysis_mutations.py`** — the four reported perturbations kept verbatim plus
+  ten more across the other three checks. All 14 caught. Run by `scripts/reproduce_all.py`, so
+  CI enforces them.
+- **`src/callee_provenance.py`** — a `script_version` column names the caller. This records the
+  **callee**: qualified name, module path, source SHA-256, file SHA-256, repository commit and
+  worktree state. C1's two arms called different comparators while both tables recorded the same
+  driver version, truthfully.
+- **`scripts/record_callee_provenance.py`** + `results_expected/identity_nlst_full_n2231.provenance.md`
+  — the full-cohort table predates that recording, so its provenance is reconstructed, says so
+  in its own text, and is anchored on a fact the script re-verifies every run: the last commit
+  touching either comparator predates the first row's timestamp. A later edit makes it fail
+  rather than print a stale digest.
+
+### Fixed
+
+- **`analysis/full_cohort_identity.py`** recomputed one predicate from the numeric columns and
+  then trusted a recorded flag for the other — half the lesson applied. It now recomputes both,
+  asserts zero failed rows, identifier uniqueness and non-blankness, and the alignment median
+  with its denominator.
+- **`analysis/speedup_intervals.py`** — found by the new suite, same defect class: it read a
+  stored `speedup_ratio` column instead of recomputing it from the two timings. It now
+  recomputes, rejects non-positive durations, and checks itself against the stored column. Its
+  header also promised *every* speedup interval; it reads only the real-CT benchmark.
+- **`README.md`** said "All 4 runnable checks" and listed a fraction of the scripts.
+
 ## [v2.5.2-repro.5] — the identity claim's real-CT arm, in full (2026-09-20)
 
 Section 3.2's real-CT arm was a 50-case subset. It is now the **entire NLST thin-slice cohort**,

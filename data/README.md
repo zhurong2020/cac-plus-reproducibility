@@ -55,6 +55,21 @@ subset re-downloadable from TCIA / NCI Imaging Data Commons. Regenerate both wit
 `python scripts/build_cohort_manifests.py`; it asserts the 2,231 / 2,224 / 206 denominators against
 the manuscript and refuses to write a manifest that disagrees with the paper.
 
+### The NLST full-cohort identity table ships with this package
+
+`results_expected/identity_nlst_full_n2231.csv` holds one row per NLST thin-slice acquisition,
+2,231 of them, with both implementations' Agatston scores, the published v2.5.2 score, the
+per-case alignment check and provenance columns. `analysis/full_cohort_identity.py` checks every
+number section 3.2 and Online Methods M3a state against it, and runs with no download.
+
+**What that check establishes, and what it does not.** It confirms the manuscript's arithmetic
+over our measurement -- the denominator, the agreement count, the exact binomial interval, the
+strata, the alignment minimum. It does not re-measure. Re-measuring needs the NLST images under
+the NCI data-use agreement and the segmentation masks; with both, the scoring core in `src/`
+regenerates the table and it can be compared row by row, which is why the table ships at all.
+
+The identifiers are NLST's own numeric case identifiers, as elsewhere in this package.
+
 ### Which COCA file is the reference standard
 
 Use the release's own score table, `nongated_chest_ct/scores.xlsx`: 213 non-gated acquisitions

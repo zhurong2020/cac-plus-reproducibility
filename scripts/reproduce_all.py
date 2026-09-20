@@ -4,7 +4,7 @@
     python scripts/reproduce_all.py                      # everything that needs no data
     python scripts/reproduce_all.py --coca-scores S.csv --coca-reference R.csv
 
-Seven of the eight checks need no data at all -- no images, no model weights, no
+Eight of the nine checks need no data at all -- no images, no model weights, no
 network. They run from the per-case result tables in results_expected/. Only the
 COCA agreement panel needs files you supply, because nothing COCA-derived may be
 redistributed (see README).
@@ -129,6 +129,10 @@ def build_checks(coca_scores, coca_reference, coca_vendor=None):
               ["analysis/agreement_panel.py", "--selftest"],
               expect=["identity holds", "55/206 = 0.2669903", "selftest PASS"],
               note="M13's paired code on a fixture; no data needed"),
+        Check("full-cohort score agreement", "sec 3.2 / Online M3a",
+              ["analysis/full_cohort_identity.py"],
+              expect=["2231/2231", "99.83-100%", "zero 331", "max 3883", "min 88.9%"],
+              note="2,231/2,231 identical, exact binomial CI, strata, alignment"),
         Check("cohort manifest", "sec 2.3 / Tab 1",
               ["scripts/verify_cohort_manifest.py"],
               expect=["2231 NLST thin-slice acquisitions", "2231 distinct SeriesInstanceUIDs"],

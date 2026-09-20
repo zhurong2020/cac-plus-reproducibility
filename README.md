@@ -22,7 +22,7 @@ git config core.hooksPath .githooks      # PHI/PII pre-commit hook; per-clone, n
 python scripts/reproduce_all.py
 ```
 
-**Seven of the eight checks need no data at all** — no images, no model weights, no
+**Eight of the nine checks need no data at all** — no images, no model weights, no
 network. They run from the per-case result tables in `results_expected/`. The runner
 prints a verdict per check and exits non-zero if any published value fails to reproduce.
 

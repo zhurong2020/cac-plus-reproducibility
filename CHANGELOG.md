@@ -5,6 +5,35 @@ All notable changes to this reproducibility package.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versions track the CAC Plus engine release they reproduce, suffixed `-repro`.
 
+## [v2.5.2-repro.5] — the identity claim's real-CT arm, in full (2026-09-20)
+
+Section 3.2's real-CT arm was a 50-case subset. It is now the **entire NLST thin-slice cohort**,
+and the table it rests on ships here.
+
+### Added
+
+- **`results_expected/identity_nlst_full_n2231.csv`** — 2,231 rows, one per acquisition: both
+  implementations' Agatston scores, the published v2.5.2 score, the per-case fraction of mask
+  voxels at or above 130 HU, and provenance columns (script version, processing date, spacing
+  source, series identifier). **2,231 of 2,231 bit-identical**, exact binomial 95% CI
+  **99.83–100%**; the paper previously claimed 50/50, lower bound 92.9%.
+- **`analysis/full_cohort_identity.py`** — check 7 of 9, no download needed. It **recomputes
+  equality from the two score columns rather than trusting the recorded flag**, which is not
+  pedantry: an injection test that corrupted one score left the flag reading 1 and was caught
+  only by the recomputation. It also checks the denominator, the interval, the four strata, the
+  maximum and the alignment minimum.
+
+### Why the table is worth shipping
+
+The claim it supports was previously verifiable only by us. A reader can now confirm the
+arithmetic in seconds, and a reader with NLST access under the NCI agreement can regenerate the
+table with the scoring core here and compare row by row. What the shipped check does **not** do
+is re-measure — `data/README` says so in the same words.
+
+### Changed
+
+- The runner is 9 checks, 8 of which need no data.
+
 ## [v2.5.2-repro.3] — the 206 denominator restored (2026-09-19)
 
 **Cite this tag, not `.2`.** `.2`'s acceptance criteria carry a denominator that was withdrawn

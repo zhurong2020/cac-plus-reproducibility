@@ -22,11 +22,12 @@ git config core.hooksPath .githooks      # PHI/PII pre-commit hook; per-clone, n
 python scripts/reproduce_all.py
 ```
 
-**Eight of the nine checks need no data at all** — no images, no model weights, no
-network. They run from the per-case result tables in `results_expected/`. The runner
+**Ten of the eleven checks need no additional download** — no images, no model weights, no
+network. They run from the per-case result tables shipped in `results_expected/`, which are
+de-identified NLST per-acquisition scores and identifiers rather than no data at all. The runner
 prints a verdict per check and exits non-zero if any published value fails to reproduce.
 
-The fifth needs two CSVs from your own COCA download (see below):
+The eleventh needs two CSVs from your own COCA download (see below):
 
 ```bash
 python scripts/reproduce_all.py --coca-scores yours.csv --coca-reference your_coca_gt.csv
@@ -41,7 +42,7 @@ pip install -r requirements.txt
 python scripts/reproduce_all.py
 ```
 
-Expected last line: `All 4 runnable checks reproduce the manuscript.`
+Expected last line: `10 of 10 runnable checks reproduce the manuscript.`
 
 Verified on native Windows (PowerShell, Python 3.11, numpy 2.4.6, scipy 1.17.1), on Linux,
 and in CI across Python 3.10–3.13. Output is ASCII and colour is used only when the terminal
@@ -71,14 +72,20 @@ python analysis/agreement_panel.py --scores yours.csv --reference your_coca_gt.c
 
 | Script | Manuscript | Reproduces |
 |---|---|---|
-| `benchmarks/byte_identity_synthetic.py` | §3.2 (C1), Fig 3a | vectorised == vendor-reference Agatston, byte for byte |
+| `benchmarks/byte_identity_synthetic.py` | §3.2 (C1), Fig 3a | the vectorised and vendor-reference Agatston scores agree exactly on all 100 synthetic cases |
 | `benchmarks/speedup_realct.py` | §3.3 (C2), Fig 3b/c | the speedup statistics, from the shipped 50-case per-case timings. Re-*measuring* the timings would need the images and a GPU; this reproduces the published summary from the measurements |
 | `analysis/spacing_audit.py` | §3.6 (C5) | the `ImagePositionPatient` overlap-reconstruction audit |
 | `analysis/agreement_panel.py` | §3.1, **§3.7** | zero-CAC rates; agreement against the COCA expert reference, either arm |
 | `scripts/reproduce_all.py` | all of the above | runs every available check and verifies the published values |
 | `scripts/verify_cohort_manifest.py` | §2.3 / Table 1 | checks the shipped manifest: denominator, one row per series UID, no leak |
 | `scripts/build_cohort_manifests.py` | — | **maintainer only**; rebuilds the manifest from private source tables, so neither CI nor a reader can run it |
-| `src/agatston_vectorised.py`, `src/agatston_vendor_ref.py` | Table 2 | the two Agatston implementations proven identical |
+| `src/agatston_vectorised.py`, `src/agatston_vendor_ref.py` | Table 2 | the two Agatston implementations, which agree exactly on every case benchmarked here |
+| `src/callee_provenance.py` | §M3a / §M15 | records which implementation a run called: module path, source SHA-256, repository commit |
+| `scripts/record_callee_provenance.py` | §M3a / §M15 | reconstructs that record for the full-cohort table, and re-checks the argument that supports it |
+| `analysis/full_cohort_identity.py` | §3.2 / §M3a | the whole NLST thin-slice cohort: denominator, agreement, exact binomial interval, strata, alignment |
+| `analysis/min_sensitivity.py` | Online R8 | the `min_calc_object_pixels` sensitivity analysis and its exact and bootstrap intervals |
+| `analysis/speedup_intervals.py` | §3.3 (C2) | the real-CT bootstrap intervals, recomputed from the shipped timings |
+| `tests/test_analysis_mutations.py` | the checks themselves | 14 perturbations of the shipped tables; each must make a check fail |
 | `src/risk_categories.py` | §2.4 | the SCCT four strata — the single definition used everywhere |
 
 `results_expected/_INVALID_transposed_ct_*.csv` is kept on purpose. It is the superseded C2

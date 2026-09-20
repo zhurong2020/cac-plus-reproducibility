@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Every speedup interval the paper reports, from one documented function.
+"""The real-CT speedup intervals the paper reports, from one documented function.
+
+Scope, stated first because an earlier version of this line did not: this reads the 50-case
+real-CT benchmark only. The synthetic-cohort intervals in M12a are not computed here.
 
 The manuscript states its convention once -- "bootstrap 95% CIs of the median
 (10,000 resamples, seed 42)" -- and then prints intervals computed by a script that
@@ -53,8 +56,26 @@ def stratum(score: float) -> str:
 
 
 def main() -> int:
-    rows = list(csv.DictReader(CSV.open()))
-    sp = np.array([float(r["speedup_ratio_min1"]) for r in rows])
+    with CSV.open(newline="", encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+
+    # Recompute the ratio from the two timings rather than reading the stored column. An
+    # injection test (tests/test_analysis_mutations.py) zeroed the optimised durations and this
+    # script still passed, because it believed a derived column -- the same defect the
+    # full-cohort checker had. A duration of zero or less is not a fast run; it is a broken row.
+    vendor_s = np.array([float(r["vendor_naive_min1_s"]) for r in rows])
+    ours_s = np.array([float(r["cac_plus_optimized_s"]) for r in rows])
+    if (ours_s <= 0).any() or (vendor_s <= 0).any():
+        n = int((ours_s <= 0).sum() + (vendor_s <= 0).sum())
+        print(f"FAIL: {n} non-positive duration(s); a timing table cannot contain one")
+        return 1
+    sp = vendor_s / ours_s
+    stored = np.array([float(r["speedup_ratio_min1"]) for r in rows])
+    drift = np.abs(sp - stored)
+    if drift.max() > 0.005:
+        print(f"FAIL: recomputed speedup differs from the stored column by up to "
+              f"{drift.max():.4f} on {int((drift > 0.005).sum())} row(s)")
+        return 1
     cur = np.array([float(r["cac_plus_score"]) for r in rows])
 
     lo, hi = median_ci(sp)
@@ -85,7 +106,7 @@ def main() -> int:
     if bad:
         print("\nFAIL:\n  " + "\n  ".join(bad))
         return 1
-    print("\nPASS: every interval matches the value the manuscript reports.")
+    print("\nPASS: every real-CT interval matches the value the manuscript reports.")
     return 0
 
 

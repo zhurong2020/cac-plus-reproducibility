@@ -137,6 +137,14 @@ def build_checks(coca_scores, coca_reference, coca_vendor=None):
               ["scripts/verify_cohort_manifest.py"],
               expect=["2231 NLST thin-slice acquisitions", "2231 distinct SeriesInstanceUIDs"],
               note="n = 2,231, one row per series UID, no leak"),
+        Check("callee provenance", "Online M3a / M15",
+              ["scripts/record_callee_provenance.py"],
+              expect=["PASS: the reconstruction holds"],
+              note="which implementations produced the full-cohort table, re-argued"),
+        Check("injection tests", "the checks above",
+              ["tests/test_analysis_mutations.py"],
+              expect=["control (unmutated): PASS", "ALL SUITES PASS"],
+              note="14 perturbations of the shipped tables; each must make a check fail"),
     ]
     if coca_scores and coca_reference:
         checks.append(Check(

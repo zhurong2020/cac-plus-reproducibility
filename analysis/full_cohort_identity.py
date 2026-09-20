@@ -32,6 +32,7 @@ EXPECT_CI_LOW = 99.83          # exact binomial, two-sided 95%, k = n
 EXPECT_STRATA = {"zero": 331, "mild": 771, "moderate": 548, "severe": 581}
 EXPECT_MAX = 3883.0
 EXPECT_ALIGN_MIN = 88.9        # lowest per-case fraction of mask voxels at or above 130 HU
+EXPECT_ALIGN_N = 2103          # rows with a non-empty mask; the other 128 score zero
 
 
 def clopper_pearson_low(k: int, n: int) -> float:
@@ -54,11 +55,19 @@ def main() -> int:
     ok = [r for r in rows if r["status"] == "success"]
     bad_status = len(rows) - len(ok)
 
+    # Recompute BOTH predicates from the numeric columns. Round six found this file
+    # recomputing `identical` and then trusting the recorded `reproduces_published`
+    # flag without ever comparing it to `published_score` -- half the lesson applied.
+    # Three of four demonstrated mutations passed because of that and the two missing
+    # assertions below; they are now regression tests in tests/.
     identical = sum(1 for r in ok if r["identical"] == "1")
     reproduces = sum(1 for r in ok if r["reproduces_published"] == "1")
-    # Do not trust the recorded flag alone -- recompute equality from the two score columns.
     recomputed = sum(1 for r in ok
                      if float(r["score_vectorised"]) == float(r["score_vendor_naive"]))
+    recomputed_repro = sum(1 for r in ok
+                           if abs(float(r["score_vectorised"]) - float(r["published_score"])) < 0.5)
+    pids = [r["patient_id"].strip() for r in rows]
+    uids = [r["series_uid"].strip() for r in rows]
     scores = [float(r["score_vectorised"]) for r in ok]
     strata = {k: 0 for k in EXPECT_STRATA}
     for s in scores:
@@ -71,14 +80,33 @@ def main() -> int:
     print(f"  recomputed from the columns : {recomputed}/{len(ok)}")
     print(f"  exact binomial 95% CI       : {ci_low:.2f}-100%")
     print(f"reproduces the published score: {reproduces}/{len(ok)}")
+    print(f"  recomputed from the columns : {recomputed_repro}/{len(ok)}")
     print(f"burden coverage               : zero {strata['zero']} · mild {strata['mild']} · "
           f"moderate {strata['moderate']} · severe {strata['severe']} · max {max(scores):.0f}")
     print(f"mask voxels >=130 HU          : min {min(align):.1f}% · "
           f"median {sorted(align)[len(align)//2]:.1f}%")
 
     fail = []
+    if len(rows) != EXPECT_N:
+        fail.append(f"{len(rows)} rows, M3a says {EXPECT_N}")
+    if bad_status:
+        fail.append(f"{bad_status} row(s) not status=success; M3a reports zero errors")
+    if len(set(pids)) != len(pids):
+        fail.append(f"duplicate patient_id: {len(pids) - len(set(pids))}")
+    if len(set(uids)) != len(uids):
+        fail.append(f"duplicate series_uid: {len(uids) - len(set(uids))}")
+    if "" in set(pids) | set(uids):
+        fail.append("blank patient_id or series_uid")
     if len(ok) != EXPECT_N:
         fail.append(f"n is {len(ok)}, M3a says {EXPECT_N}")
+    if recomputed_repro != EXPECT_REPRODUCES:
+        fail.append(f"published-score agreement recomputed as {recomputed_repro}, "
+                    f"flags say {reproduces}, M3a says {EXPECT_REPRODUCES}")
+    med_align = sorted(align)[len(align) // 2]
+    if abs(med_align - 100.0) > 1e-9:
+        fail.append(f"alignment median {med_align:.2f}%, M3a says 100%")
+    if len(align) != EXPECT_ALIGN_N:
+        fail.append(f"alignment covers {len(align)} rows, M3a says {EXPECT_ALIGN_N}")
     if identical != EXPECT_IDENTICAL or recomputed != EXPECT_IDENTICAL:
         fail.append(f"identical {identical} (recomputed {recomputed}), M3a says {EXPECT_IDENTICAL}")
     if reproduces != EXPECT_REPRODUCES:

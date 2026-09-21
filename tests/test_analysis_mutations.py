@@ -123,6 +123,29 @@ def _manifest_row_dropped(rows):
     return rows[:-3]
 
 
+# --- round seven: the reviewer's attack on the provenance checker ------------------------
+
+def _upstream_digest_zeroed(rows):
+    """Round seven, verbatim. The checker asserted the digest was single-valued and never that
+    it was *right*, so 64 zeros passed. A digest nothing is compared against is decoration."""
+    for r in rows:
+        r["ref_callee_source_sha256"] = "0" * 64
+    return rows
+
+
+def _upstream_commit_swapped(rows):
+    for r in rows:
+        r["ref_callee_repo_commit"] = "deadbeef" * 5
+    return rows
+
+
+def _callee_renamed(rows):
+    """The table would then name a comparator that is not the pinned upstream function."""
+    for r in rows:
+        r["ref_callee"] = "cac-plus-reproducibility:src/agatston_vendor_ref.py::agatston_naive"
+    return rows
+
+
 SUITES = {
     "full_cohort_identity.py": [
         Mutation("published_score -> 999999", IDENTITY, _published_score_altered,
@@ -153,6 +176,14 @@ SUITES = {
                  "the interval is read from a stored ratio rather than recomputed from timings"),
         Mutation("optimised timings zeroed", SPEEDUP, _speedup_timing_zeroed,
                  "a zero or negative duration is not rejected"),
+    ],
+    "../scripts/record_callee_provenance.py": [
+        Mutation("upstream digest -> 64 zeros", IDENTITY, _upstream_digest_zeroed,
+                 "the digest is asserted single-valued but never compared to the pinned source"),
+        Mutation("upstream commit swapped", IDENTITY, _upstream_commit_swapped,
+                 "the recorded commit is not checked against the pinned release"),
+        Mutation("reference arm renamed to the transcription", IDENTITY, _callee_renamed,
+                 "the table could name our transcription and still pass"),
     ],
     "spacing_audit.py": [
         Mutation("40 acquisitions retyped as 1.0 mm", MANIFEST, _manifest_spacing_retyped,

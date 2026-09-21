@@ -81,18 +81,29 @@ def _sandbox(script: pathlib.Path, tables: Iterable[str], tmp: pathlib.Path) -> 
     while everything else is linked. That keeps the sandbox cheap and keeps a mutated table from
     ever being written inside the repository.
     """
-    (tmp / "analysis").mkdir(parents=True, exist_ok=True)
+    rel = script.relative_to(REPO)                      # e.g. analysis/x.py or scripts/y.py
+    (tmp / rel.parent).mkdir(parents=True, exist_ok=True)
     (tmp / "results_expected").mkdir(parents=True, exist_ok=True)
-    shutil.copy2(script, tmp / "analysis" / script.name)
+    shutil.copy2(script, tmp / rel)
     for t in tables:
         shutil.copy2(REPO / "results_expected" / t, tmp / "results_expected" / t)
     for entry in REPO.iterdir():
-        if entry.name in {"analysis", "results_expected", ".git"}:
+        if entry.name in {rel.parts[0], "results_expected", ".git"}:
             continue
         link = tmp / entry.name
-        if not link.exists():
+        if link.exists():
+            continue
+        # Symlinks need a privilege Windows does not grant by default (round seven hit
+        # WinError 1314 here, which aborted the suite *before* its control ran -- and a harness
+        # that dies before the control is exactly the failure this fixture exists to prevent).
+        try:
             link.symlink_to(entry)
-    return tmp / "analysis" / script.name
+        except (OSError, NotImplementedError):
+            if entry.is_dir():
+                shutil.copytree(entry, link, symlinks=True, dirs_exist_ok=True)
+            else:
+                shutil.copy2(entry, link)
+    return tmp / rel
 
 
 def _run(script: pathlib.Path) -> subprocess.CompletedProcess:
@@ -106,7 +117,9 @@ def check_mutations(script_name: str, mutations: list[Mutation]) -> int:
     The control is not optional and not a formality: it is the assertion that a failure below it
     means what it appears to mean.
     """
-    script = REPO / "analysis" / script_name
+    # A check may live anywhere in the repository, not only in analysis/.
+    script = (REPO / "analysis" / script_name) if "/" not in script_name \
+        else (REPO / "analysis" / script_name).resolve()
     tables = sorted({m.table for m in mutations})
     print(f"== {script_name}: control + {len(mutations)} mutation(s) ==")
 

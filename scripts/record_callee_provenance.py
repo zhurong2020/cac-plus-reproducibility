@@ -24,6 +24,7 @@ Run: python3 scripts/record_callee_provenance.py [--write]
 from __future__ import annotations
 
 import csv
+import hashlib
 import datetime as dt
 import pathlib
 import subprocess
@@ -87,6 +88,38 @@ def main() -> int:
     ref = rows[0]["ref_callee"]
     if "AI-CAC@v1.0.0" not in ref or "compute_agatston_for_vol" not in ref:
         bad.append(f"reference arm is {ref!r}; expected the pinned upstream function")
+
+    # Round seven: a reviewer replaced every recorded upstream digest with 64 zeros and this
+    # script still returned success. It was checking that the digest was *single-valued*, never
+    # that it was *right* -- the exact defect the injection tests exist to catch, in the script
+    # written to enforce provenance. A digest nothing is compared against is decoration.
+    #
+    # Recompute it from the pinned checkout when that checkout is present. When it is not, say
+    # the digest is unauthenticated rather than pass quietly: a reader without the upstream
+    # source cannot verify this row, and the output should tell them so.
+    recorded = rows[0]["ref_callee_source_sha256"].strip()
+    upstream = pathlib.Path.home() / "projects" / "_upstream" / "AI-CAC-v1.0.0" / "processing.py"
+    if upstream.is_file():
+        # Parse, do not import: upstream's module header pulls in torch, pandas and pydicom,
+        # and none of them is needed to read one function's source text.
+        import ast
+        try:
+            text = upstream.read_text(encoding="utf-8")
+            node = next(n for n in ast.parse(text).body
+                        if isinstance(n, ast.FunctionDef) and n.name == "compute_agatston_for_vol")
+            src = ast.get_source_segment(text, node)
+            actual = hashlib.sha256((src + "\n").encode("utf-8")).hexdigest()
+        except Exception as exc:                       # noqa: BLE001 - reported, not raised
+            bad.append(f"could not hash the pinned upstream function: {type(exc).__name__}")
+        else:
+            if actual != recorded:
+                bad.append(f"recorded upstream digest {recorded[:16]}… does not match the pinned "
+                           f"source, which hashes to {actual[:16]}…")
+            else:
+                print(f"  digest authenticated against {upstream}")
+    else:
+        print(f"  [!] {upstream} absent: the recorded upstream digest is NOT authenticated here. "
+              f"Clone Raffi-Hagopian/AI-CAC at v1.0.0 to that path to check it.")
     if {r["ref_callee_repo_commit"] for r in rows} != {UPSTREAM_COMMIT}:
         bad.append(f"reference commit {rows[0]['ref_callee_repo_commit'][:12]}, "
                    f"expected {UPSTREAM_COMMIT[:12]}")

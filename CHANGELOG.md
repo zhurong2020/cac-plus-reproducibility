@@ -5,6 +5,46 @@ All notable changes to this reproducibility package.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versions track the CAC Plus engine release they reproduce, suffixed `-repro`.
 
+## [v2.5.2-repro.9] — the real-CT arm is measured against the vendor's own function (2026-09-21)
+
+C1 had two arms and two comparators. The 100-case synthetic arm ran against the vendor's own
+code; the 2,231-case real-CT arm ran against `src/agatston_vendor_ref.py`, which its own
+docstring calls **our transcription of the vendor's logic, not the vendor's code**. External
+review found this; nothing in this repository could have. Relabelling would have left the
+paper's largest evidence saying our implementation agrees with our own transcription, so the arm
+was repeated instead.
+
+### Changed
+
+- **`results_expected/identity_nlst_full_n2231.csv`** regenerated from a run whose reference arm
+  is `compute_agatston_for_vol`, taken unchanged from `Raffi-Hagopian/AI-CAC` at `v1.0.0`
+  (commit `6989588…`), called with `min_calc_object_pixels = 1` — the value read out of
+  upstream's own batch entry point rather than taken from our notes. **2,231 of 2,231** exact
+  agreement, zero errors, 12.1 h. Strata, maximum and exact binomial interval unchanged.
+- **Every row names the two functions that produced it**: `ours_callee` / `ref_callee` with
+  source digests and commits. Local absolute paths are not published — the reference arm reads
+  `Raffi-Hagopian/AI-CAC@v1.0.0:processing.py`, the test arm a repository-relative path.
+- **`scripts/record_callee_provenance.py` asserts instead of reconstructing**, and
+  `identity_nlst_full_n2231.provenance.md` is removed. The reconstruction existed because the
+  table predated run-time recording; it no longer does.
+
+### Also worth recording
+
+The two reference arms **agree on all 2,231 acquisitions**, so the transcription is faithful on
+this cohort. That matters because the package still ships it, but §M3a's claim no longer depends
+on it.
+
+`ours_callee_repo_commit` holds **two** values — a CHANGELOG commit landed between the pilot's
+tenth case and its eleventh. The source digest is single-valued and the scored function's diff
+across those commits is empty. **Repository HEAD is the right thing to record and the wrong
+thing to assert constant**: it moves for reasons unrelated to the function. The script asserts
+the digest and reports the commit span.
+
+## [v2.5.2-repro.8] — changelog for repro.6 and repro.7 (2026-09-20)
+
+No code change from repro.7. Suffixed tags are immutable and are never re-pointed, so the
+changelog those two releases should have carried is tagged separately.
+
 ## [v2.5.2-repro.7] — the package says what the manuscript says (2026-09-20)
 
 Round six of external review found the package still asserting three things the manuscript had

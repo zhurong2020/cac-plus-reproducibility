@@ -101,7 +101,7 @@ no images, and nothing COCA-derived at all.
 | `scripts/build_cohort_manifests.py` | — | **maintainer only**; rebuilds the manifest from private source tables, so neither CI nor a reader can run it |
 | `src/agatston_vectorised.py`, `src/agatston_vendor_ref.py` | Table 2 | the two Agatston implementations, which agree exactly on every case benchmarked here |
 | `src/callee_provenance.py` | §M3a / §M15 | records which implementation a run called: module path, source SHA-256, repository commit |
-| `scripts/record_callee_provenance.py` | §M3a / §M15 | reconstructs that record for the full-cohort table, and re-checks the argument that supports it |
+| `scripts/record_callee_provenance.py` | §M3a / §M15 | asserts the full-cohort table names its own comparators and that the reference arm is upstream `v1.0.0` |
 | `analysis/full_cohort_identity.py` | §3.2 / §M3a | the whole NLST thin-slice cohort: denominator, agreement, exact binomial interval, strata, alignment |
 | `analysis/min_sensitivity.py` | Online R8 | the `min_calc_object_pixels` sensitivity analysis and its exact and bootstrap intervals |
 | `analysis/speedup_intervals.py` | §3.3 (C2) | the real-CT bootstrap intervals, recomputed from the shipped timings |

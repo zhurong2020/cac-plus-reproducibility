@@ -139,8 +139,12 @@ def build_checks(coca_scores, coca_reference, coca_vendor=None):
               note="n = 2,231, one row per series UID, no leak"),
         Check("callee provenance", "Online M3a / M15",
               ["scripts/record_callee_provenance.py"],
-              expect=["PASS: the reconstruction holds"],
-              note="which implementations produced the full-cohort table, re-argued"),
+              # An acceptance criterion is a published claim and has to move when the claim
+              # does. This one asserted a reconstruction; the table now names its callees on
+              # every row, so there is nothing to reconstruct and the criterion says so.
+              expect=["Raffi-Hagopian/AI-CAC@v1.0.0", "compute_agatston_for_vol",
+                      "PASS: every row names one comparator pair"],
+              note="the table names its own comparators; reference arm is upstream v1.0.0"),
         Check("injection tests", "the checks above",
               ["tests/test_analysis_mutations.py"],
               expect=["control (unmutated): PASS", "ALL SUITES PASS"],

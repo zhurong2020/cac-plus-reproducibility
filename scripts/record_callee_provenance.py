@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
-"""Write, and re-assert, which implementations produced `identity_nlst_full_n2231.csv`.
+"""RETIRED 2026-09-21 as a reconstruction; kept as a check that the table states its own callees.
 
-The table was generated before the driver recorded its callees, so these facts are reconstructed
-rather than captured. That is a weaker claim and the sidecar says so in its own text. What makes
+`identity_nlst_full_n2231.csv` now carries `ours_callee_*` and `ref_callee_*` on **every row**,
+written at run time by driver v2.0.0. There is nothing left to reconstruct, and this script no
+longer writes a sidecar. What it still does is verify that those columns are present, single-valued
+and name the pinned upstream function -- because a table that silently lost them would look exactly
+like one that never needed them.
+
+The original text follows, because the reasoning is worth keeping: the table used to be generated
+before the driver recorded its callees, so the facts were reconstructed rather than captured. That
+is a weaker claim and the sidecar said so in its own text. What makes
 the reconstruction checkable rather than asserted is one temporal fact this script verifies every
 time it runs: **the last commit touching either comparator predates the first row's timestamp**,
 so the source in the tree is the source that ran. If someone edits a comparator, the argument
@@ -29,7 +36,7 @@ from agatston_vectorised import agatston_vectorised  # noqa: E402
 from agatston_vendor_ref import agatston_naive  # noqa: E402
 
 TABLE = REPO / "results_expected" / "identity_nlst_full_n2231.csv"
-SIDECAR = REPO / "results_expected" / "identity_nlst_full_n2231.provenance.md"
+UPSTREAM_COMMIT = "6989588536d266b00c422ef98f2fcf809a6b895a"
 ARMS = [("CAC Plus, vectorised", agatston_vectorised, "src/agatston_vectorised.py"),
         ("reference comparator", agatston_naive, "src/agatston_vendor_ref.py")]
 
@@ -48,67 +55,53 @@ def last_commit(rel: str) -> tuple[str, dt.datetime]:
 
 
 def main() -> int:
+    """Assert that the shipped table names its own comparators. No reconstruction."""
     with TABLE.open(newline="", encoding="utf-8") as fh:
-        dates = sorted(r["processing_date"] for r in csv.DictReader(fh) if r["processing_date"])
-    run_start = dt.datetime.strptime(dates[0], "%Y-%m-%d %H:%M:%S")
+        rows = list(csv.DictReader(fh))
+    need = ["ours_callee", "ours_callee_source_sha256", "ours_callee_repo_commit",
+            "ref_callee", "ref_callee_source_sha256", "ref_callee_repo_commit"]
+    missing = [c for c in need if c not in (rows[0] if rows else {})]
+    if missing:
+        print("FAIL: the table no longer records its callees: " + ", ".join(missing))
+        return 1
 
-    lines, bad = [], []
-    for label, fn, rel in ARMS:
-        rec = callee_record(fn)
-        sha, changed = last_commit(rel)
-        if changed >= run_start:
-            bad.append(f"{rel} last changed {changed:%Y-%m-%d %H:%M} at or after the run "
-                       f"began {run_start:%Y-%m-%d %H:%M} -- the tree is no longer the run")
-        if rec["callee_repo_dirty"] == "yes":
-            bad.append(f"{rel} has uncommitted changes; its digest describes no commit")
-        lines.append((label, rel, rec, sha, changed))
+    bad = []
+    # What must be constant is the FUNCTION, i.e. its source digest -- not the repository HEAD.
+    # A run that spans an unrelated commit records two HEADs and is perfectly sound: this table
+    # does, because a CHANGELOG commit landed between the pilot's tenth case and its eleventh,
+    # and the diff of the scored function across those two commits is empty. Asserting on HEAD
+    # would fail a correct run; asserting on the digest catches the thing that would matter.
+    for col in need:
+        vals = {r[col].strip() for r in rows}
+        if "" in vals:
+            bad.append(f"{col} is blank on at least one row")
+        if col.endswith("sha256") or col in ("ours_callee", "ref_callee"):
+            if len(vals) != 1:
+                bad.append(f"{col} changed mid-run: {len(vals)} distinct values across "
+                           f"{len(rows)} rows -- the comparator was not one function")
+    for col in ("ours_callee_repo_commit", "ref_callee_repo_commit"):
+        n = len({r[col] for r in rows})
+        if n > 1:
+            print(f"  note: {col} spans {n} commits; the source digest is unchanged, so the "
+                  f"function is the same and the repository simply moved")
+    ref = rows[0]["ref_callee"]
+    if "AI-CAC@v1.0.0" not in ref or "compute_agatston_for_vol" not in ref:
+        bad.append(f"reference arm is {ref!r}; expected the pinned upstream function")
+    if {r["ref_callee_repo_commit"] for r in rows} != {UPSTREAM_COMMIT}:
+        bad.append(f"reference commit {rows[0]['ref_callee_repo_commit'][:12]}, "
+                   f"expected {UPSTREAM_COMMIT[:12]}")
 
-    print(f"table rows span {dates[0]} .. {dates[-1]}")
-    for label, rel, rec, _sha, changed in lines:
-        print(f"  {label:<22} {rel}  last changed {changed:%Y-%m-%d}  "
-              f"sha256 {rec['callee_source_sha256'][:16]}")
+    print(f"rows {len(rows)}")
+    print(f"  test arm      {rows[0]['ours_callee']}")
+    print(f"                sha256 {rows[0]['ours_callee_source_sha256'][:16]} @ "
+          f"{rows[0]['ours_callee_repo_commit'][:12]}")
+    print(f"  reference arm {rows[0]['ref_callee']}")
+    print(f"                sha256 {rows[0]['ref_callee_source_sha256'][:16]} @ "
+          f"{rows[0]['ref_callee_repo_commit'][:12]}")
     if bad:
         print("\nFAIL:\n  " + "\n  ".join(bad))
         return 1
-
-    body = [
-        "# Which implementations produced `identity_nlst_full_n2231.csv`",
-        "",
-        "Generated by `scripts/record_callee_provenance.py`; do not edit by hand.",
-        "",
-        "**This is reconstructed, not captured.** The run predates version 1.1.0 of the driver,",
-        "which records its callees in the table itself. What supports the reconstruction is a",
-        "fact the generator re-checks on every run: the last commit touching either file below",
-        f"predates the first row's timestamp ({dates[0]}), and neither worktree is dirty, so the",
-        "source in the tree is the source that ran. A later edit makes the generator fail rather",
-        "than print a stale digest.",
-        "",
-        "It remains the weaker form of the claim. Digests taken at run time are the stronger one,",
-        "and after a run there is no way back to it.",
-        "",
-        "| Arm | Module | Function | Source SHA-256 | Commit that last touched it | Date |",
-        "|---|---|---|---|---|---|",
-    ]
-    for label, rel, rec, sha, changed in lines:
-        body.append(f"| {label} | `{rel}` | `{rec['callee_qualname'].split('.')[-1]}` | "
-                    f"`{rec['callee_source_sha256'][:32]}…` | `{sha[:12]}` | "
-                    f"{changed:%Y-%m-%d} |")
-    body += [
-        "",
-        f"Rows span `{dates[0]}` to `{dates[-1]}`; driver `run_full_identity.py` version 1.0.0,",
-        "in `ai-cac-research/results/c1_full_cohort_identity_20260920/`.",
-        "",
-        "**The reference comparator is our transcription of the vendor's logic, not the vendor's",
-        "code** — its own docstring says so, and Online Methods M15 states it. The synthetic arm",
-        "of the same comparison ran against the vendor's published implementation. Repeating this",
-        "arm against the pinned upstream function is a separate, planned run.",
-        "",
-    ]
-    if "--write" in sys.argv:
-        SIDECAR.write_text("\n".join(body), encoding="utf-8")
-        print(f"\nwritten: {SIDECAR.relative_to(REPO)}")
-    else:
-        print("\nPASS: the reconstruction holds. Pass --write to refresh the sidecar.")
+    print("\nPASS: every row names one comparator pair, and the reference arm is upstream v1.0.0.")
     return 0
 
 

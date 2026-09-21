@@ -59,7 +59,12 @@ the manuscript and refuses to write a manifest that disagrees with the paper.
 
 `results_expected/identity_nlst_full_n2231.csv` holds one row per NLST thin-slice acquisition,
 2,231 of them, with both implementations' Agatston scores, the published v2.5.2 score, the
-per-case alignment check and provenance columns. `analysis/full_cohort_identity.py` checks every
+per-case alignment check and provenance columns. **Each row names the two functions that produced
+it** -- `ours_callee` / `ref_callee` with their source digests and commits -- so the comparator is
+a property of the data rather than of this sentence. The reference arm is the vendor's own
+`compute_agatston_for_vol`, taken unchanged from `Raffi-Hagopian/AI-CAC` at `v1.0.0`. Until
+2026-09-21 it was our transcription of that function; the arm was repeated so both arms of the
+claim share one comparator, and the two agree on all 2,231 acquisitions. `analysis/full_cohort_identity.py` checks every
 number section 3.2 and Online Methods M3a state against it, and runs with no download.
 
 **What that check establishes, and what it does not.** It confirms the manuscript's arithmetic

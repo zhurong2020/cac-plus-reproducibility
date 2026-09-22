@@ -5,6 +5,42 @@ All notable changes to this reproducibility package.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versions track the CAC Plus engine release they reproduce, suffixed `-repro`.
 
+## [v2.5.2-repro.11] — the digest check now works on machines that are not ours (2026-09-22)
+
+`v2.5.2-repro.10` is red in CI. The cause is the fix it shipped.
+
+### Fixed
+
+- **`scripts/record_callee_provenance.py` passed on every machine that could not perform its
+  check.** repro.10 made it recompute the upstream digest from the pinned checkout and fail on a
+  mismatch, but when that checkout is absent it printed "unauthenticated" and returned success.
+  The checkout is absent on **every machine except the one that produced the table** — including
+  CI, including any reader's — so the zeroed-digest mutation it was written to catch went
+  straight through there while being caught locally. Saying a thing is unverified while exiting
+  0 is fail-open with better manners.
+
+  The digest is now a constant in the script, compared **first**, so the check works anywhere.
+  Where the checkout is present the constant is verified against the real source, so it is
+  checked rather than trusted; a mismatch prints both values and refuses to guess which is
+  wrong. Proved under the condition it must catch: with `HOME` pointed at an empty directory the
+  zeroed table exits 1.
+
+- **`.github/workflows/ci.yml` now sets `fetch-depth: 0`.** The red runs of 2026-09-20 had a
+  different cause with the same shape: the since-retired reconstruction check read
+  `git log -1 -- <file>`, and a shallow clone has no history, so every file's last commit is
+  HEAD. That check is gone; the depth stays so the next check to read history does not
+  rediscover it.
+
+**Both defects passed locally and failed in CI, and both read state that exists only on the
+development machine** — `$HOME` in one case, git history depth in the other.
+
+## [v2.5.2-repro.10] — the provenance checker authenticates the digest it reports (2026-09-21)
+
+Round seven of external review zeroed every recorded upstream digest and the checker passed. It
+now recomputes from the pinned checkout, the attack is a regression test, and the injection
+fixture falls back to copying where symlinks need a privilege Windows does not grant by default.
+**Superseded by repro.11**, which makes that recomputation work without the checkout.
+
 ## [v2.5.2-repro.9] — the real-CT arm is measured against the vendor's own function (2026-09-21)
 
 C1 had two arms and two comparators. The 100-case synthetic arm ran against the vendor's own

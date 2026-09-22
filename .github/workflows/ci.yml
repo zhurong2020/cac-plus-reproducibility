@@ -24,7 +24,15 @@ jobs:
         # which this matrix had covered. It passed; the matrix should still cover it.
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
+      # fetch-depth: 0 because a shallow clone has no history, and `git log -1 -- <file>`
+      # then returns HEAD for every file regardless of what it touched. A provenance check
+      # that read file history failed here on 2026-09-20 for exactly that reason while
+      # passing locally. That check has since been replaced by one that needs no history,
+      # but the depth stays: the next check to read history should not have to rediscover
+      # this, and full history costs seconds on a repository this size.
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
           python-version: ${{ matrix.python-version }}

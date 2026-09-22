@@ -38,6 +38,9 @@ from agatston_vendor_ref import agatston_naive  # noqa: E402
 
 TABLE = REPO / "results_expected" / "identity_nlst_full_n2231.csv"
 UPSTREAM_COMMIT = "6989588536d266b00c422ef98f2fcf809a6b895a"
+# SHA-256 of the source of compute_agatston_for_vol at that commit. The clause in main()
+# regenerates it when the upstream checkout is present; never edit it to make a run pass.
+EXPECTED_UPSTREAM_SHA256 = "f5b010d705956e8f348cd2d596d4f3fd8fb01934cf8eab409c4ba5c2a8304945"
 ARMS = [("CAC Plus, vectorised", agatston_vectorised, "src/agatston_vectorised.py"),
         ("reference comparator", agatston_naive, "src/agatston_vendor_ref.py")]
 
@@ -98,6 +101,17 @@ def main() -> int:
     # the digest is unauthenticated rather than pass quietly: a reader without the upstream
     # source cannot verify this row, and the output should tell them so.
     recorded = rows[0]["ref_callee_source_sha256"].strip()
+
+    # Compare against the constant FIRST, so this works on a machine without the upstream
+    # checkout -- which is every machine except the one that produced the table, including CI
+    # and including any reader's. The previous version printed "unauthenticated" and returned
+    # success when the checkout was absent, so CI passed the zeroed-digest mutation that the
+    # fix was written to catch. Saying a thing is unverified while exiting 0 is fail-open with
+    # better manners.
+    if recorded != EXPECTED_UPSTREAM_SHA256:
+        bad.append(f"recorded upstream digest {recorded[:16] or '(blank)'}... is not the digest of "
+                   f"compute_agatston_for_vol at v1.0.0, which is {EXPECTED_UPSTREAM_SHA256[:16]}...")
+
     upstream = pathlib.Path.home() / "projects" / "_upstream" / "AI-CAC-v1.0.0" / "processing.py"
     if upstream.is_file():
         # Parse, do not import: upstream's module header pulls in torch, pandas and pydicom,
@@ -112,14 +126,15 @@ def main() -> int:
         except Exception as exc:                       # noqa: BLE001 - reported, not raised
             bad.append(f"could not hash the pinned upstream function: {type(exc).__name__}")
         else:
-            if actual != recorded:
-                bad.append(f"recorded upstream digest {recorded[:16]}… does not match the pinned "
-                           f"source, which hashes to {actual[:16]}…")
+            if actual != EXPECTED_UPSTREAM_SHA256:
+                bad.append(f"the constant in this script, {EXPECTED_UPSTREAM_SHA256[:16]}\u2026, is "
+                           f"not the digest of the checked-out source, {actual[:16]}\u2026 \u2014 one of "
+                           f"them is wrong and it is not safe to guess which")
             else:
-                print(f"  digest authenticated against {upstream}")
+                print(f"  constant confirmed against {upstream}")
     else:
-        print(f"  [!] {upstream} absent: the recorded upstream digest is NOT authenticated here. "
-              f"Clone Raffi-Hagopian/AI-CAC at v1.0.0 to that path to check it.")
+        print("  upstream checkout absent; the recorded digest was checked against this script's "
+              "constant, which is the check that matters on a machine without it")
     if {r["ref_callee_repo_commit"] for r in rows} != {UPSTREAM_COMMIT}:
         bad.append(f"reference commit {rows[0]['ref_callee_repo_commit'][:12]}, "
                    f"expected {UPSTREAM_COMMIT[:12]}")

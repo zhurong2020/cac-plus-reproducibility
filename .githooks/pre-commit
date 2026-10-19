@@ -52,7 +52,7 @@ fi
 #      or pipe, which a CSV header row has and Chinese prose does not (prose
 #      uses the ideographic comma 、). The ASCII column names stay unconditional.
 # ---------------------------------------------------------------------------
-PATTERN='dicom_[0-9]{7,8}\b|patientingroupid\s*[:=]\s*["\x27]?[0-9]+|patient_in_group_id\s*[:=]\s*["\x27]?[0-9]+|身份证[^0-9\n]{0,10}[0-9]{6,}|\b[0-9]{17}[0-9Xx]\b|AKIA[0-9A-Z]{16}|sk_live_[A-Za-z0-9]{24,}|password\s*=\s*["\x27][^"\x27]{8,}|/home/[a-z][a-z0-9_-]*/|/Users/[a-z][a-z0-9_-]*/|patient_name_chinese|patient_name_pinyin|[,\t|]\s*(患者姓名|病人姓名)\s*[,\t|]'
+PATTERN='dicom_[0-9]{7,8}([^0-9]|$)|patientingroupid\s*[:=]\s*["\x27]?[0-9]+|patient_in_group_id\s*[:=]\s*["\x27]?[0-9]+|身份证[^0-9\n]{0,10}[0-9]{6,}|\b[0-9]{17}[0-9Xx]\b|AKIA[0-9A-Z]{16}|sk_live_[A-Za-z0-9]{24,}|password\s*=\s*["\x27][^"\x27]{8,}|/home/[a-z][a-z0-9_-]*/|/Users/[a-z][a-z0-9_-]*/|patient_name_chinese|patient_name_pinyin|[,\t|]\s*(患者姓名|病人姓名)\s*[,\t|]'
 
 # Group 7 — PROJECT-SPECIFIC: this repository is the one that goes PUBLIC.
 # Everything below is here because it was actually found in this repo on

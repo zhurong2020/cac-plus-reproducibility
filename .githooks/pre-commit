@@ -43,7 +43,7 @@ fi
 #      (REPO_PATTERN) or in the gitignored local pattern file (group 8).
 #   7. Project-specific patterns: REPO_PATTERN in the extension file.
 # ---------------------------------------------------------------------------
-PATTERN='dicom_[0-9]{7,8}([^0-9]|$)|patientingroupid\s*[:=]\s*["\x27]?[0-9]+|patient_in_group_id\s*[:=]\s*["\x27]?[0-9]+|身份证[^0-9\n]{0,10}[0-9]{6,}|\b[0-9]{17}[0-9Xx]\b|AKIA[0-9A-Z]{16}|sk_live_[A-Za-z0-9]{24,}|password\s*=\s*["\x27][^"\x27]{8,}|/home/[a-z][a-z0-9_-]*/|/Users/[a-z][a-z0-9_-]*/|patient_name_chinese|patient_name_pinyin|[,\t|]\s*(患者姓名|病人姓名)\s*[,\t|]'
+PATTERN='dicom_[0-9]{7,8}([^0-9]|$)|patientingroupid\s*[:=]\s*["'"'"']?[0-9]+|patient_in_group_id\s*[:=]\s*["'"'"']?[0-9]+|身份证[^0-9\n]{0,10}[0-9]{6,}|\b[0-9]{17}[0-9Xx]\b|AKIA[0-9A-Z]{16}|sk_live_[A-Za-z0-9]{24,}|password\s*=\s*["'"'"'][^"'"'"']{8,}|/home/[a-z][a-z0-9_-]*/|/Users/[a-z][a-z0-9_-]*/|patient_name_chinese|patient_name_pinyin|[,\t|]\s*(患者姓名|病人姓名)\s*[,\t|]'
 
 # Allowlist: files that legitimately discuss the patterns themselves. Matched
 # against the whole staged path (grep -x). .gitignore names sensitive paths and

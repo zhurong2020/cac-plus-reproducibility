@@ -139,12 +139,20 @@ series UIDs that make the exact subset re-downloadable from TCIA/IDC.
 
 ## Data
 
-Patient CT data are **not** included, and `results_expected/` contains no patient
-identifier of any kind.
+Patient CT data are **not** included. `results_expected/` contains no direct identifier and
+no clinical variable; the NLST tables do carry the de-identified participant ids (`pid`) and
+SeriesInstanceUIDs that TCIA itself distributes, so that the exact subset can be re-downloaded.
 
-- **NLST** — ClinicalTrials.gov NCT00047385, via the National Cancer Institute's data-use
-  agreement. The 2,231-acquisition subset is specified by `selected_series_uid` in the
-  manifest.
+- **NLST** — ClinicalTrials.gov NCT00047385. CT images were obtained from The Cancer Imaging
+  Archive (TCIA), where the collection is licensed under
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The NLST-derived tables in
+  `results_expected/` are redistributed under that licence with this attribution. Data citation:
+  National Lung Screening Trial Research Team (2013). *Data from the National Lung Screening
+  Trial (NLST)* [Data set]. The Cancer Imaging Archive.
+  https://doi.org/10.7937/TCIA.HMQ8-J677. Trial reference: Aberle DR et al., N Engl J Med
+  2011;365:395-409, https://doi.org/10.1056/NEJMoa1102873. The 2,231-acquisition subset is
+  specified by `selected_series_uid` in the manifest. Do not use these tables, alone or with
+  other information, to identify or contact participants (TCIA data usage policy).
 - **COCA** — Stanford AIMI public release accompanying Eng et al. 2021, under its Research
   Use Agreement.
 - **Vendor weights** — `Raffi-Hagopian/AI-CAC` release `v1.0.0` (MIT). Not redistributed

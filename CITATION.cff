@@ -20,6 +20,15 @@ preferred-citation:
   year: 2026
   notes: "Submitted. Radiology: Artificial Intelligence (declined 2026-07-09) and Korean Journal of Radiology (declined 2026-09-15) appear in this file's history, not in its current state."
 references:
+  - type: data
+    title: "Data from the National Lung Screening Trial (NLST)"
+    authors:
+      - name: "National Lung Screening Trial Research Team"
+    year: 2013
+    publisher:
+      name: "The Cancer Imaging Archive"
+    doi: 10.7937/TCIA.HMQ8-J677
+    license: CC-BY-4.0
   - type: software
     title: "AI-CAC (VA non-gated AI coronary calcium)"
     authors:

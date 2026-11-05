@@ -5,6 +5,22 @@ All notable changes to this reproducibility package.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versions track the CAC Plus engine release they reproduce, suffixed `-repro`.
 
+## [Unreleased] — NLST data citation and licence (2026-11-05)
+
+### Fixed
+
+- **The NLST data citation was missing.** The NLST CT collection on The Cancer Imaging Archive is
+  licensed CC BY 4.0 with a required data citation (doi:10.7937/TCIA.HMQ8-J677). The NLST-derived
+  tables in `results_expected/` are redistributed under that licence; README, `data/README.md`,
+  `NOTICE` and `CITATION.cff` now carry the citation and licence.
+- README said NLST came "via the National Cancer Institute's data-use agreement" (CDAS). The images
+  came from TCIA; CDAS governs only the full clinical data, which this package does not use.
+- README said `results_expected/` "contains no patient identifier of any kind", while the NLST tables
+  carry TCIA's de-identified participant ids and SeriesInstanceUIDs. Reworded to say exactly that.
+- `NOTICE` still named a journal that declined the manuscript; it now matches `CITATION.cff`.
+
+No data, code or result changed.
+
 ## [v2.5.2-repro.11] — the digest check now works on machines that are not ours (2026-09-22)
 
 `v2.5.2-repro.10` is red in CI. The cause is the fix it shipped.

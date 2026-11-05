@@ -11,7 +11,7 @@ reported numbers).
 
 | Cohort | Access | Used for |
 |---|---|---|
-| **NLST** | ClinicalTrials.gov **NCT00047385**; obtain via the NCI data-use agreement (Cancer Data Access System). | paired thin/thick (§3.6), speedup (§3.3) |
+| **NLST** | ClinicalTrials.gov **NCT00047385**; CT images from TCIA under CC BY 4.0 (data citation: NLST Research Team 2013, doi:10.7937/TCIA.HMQ8-J677); the full clinical data, not used here, require the Cancer Data Access System. | paired thin/thick (§3.6), speedup (§3.3) |
 | **COCA** | **Stanford AIMI** public release accompanying Eng et al. 2021; register and download from the AIMI shared datasets portal. | non-gated validation (§3.1) |
 
 ## Vendor weights
@@ -69,8 +69,8 @@ number section 3.2 and Online Methods M3a state against it, and runs with no dow
 
 **What that check establishes, and what it does not.** It confirms the manuscript's arithmetic
 over our measurement -- the denominator, the agreement count, the exact binomial interval, the
-strata, the alignment minimum. It does not re-measure. Re-measuring needs the NLST images under
-the NCI data-use agreement and the segmentation masks; with both, the scoring core in `src/`
+strata, the alignment minimum. It does not re-measure. Re-measuring needs the NLST images from
+TCIA (CC BY 4.0) and the segmentation masks; with both, the scoring core in `src/`
 regenerates the table and it can be compared row by row, which is why the table ships at all.
 
 The identifiers are NLST's own numeric case identifiers, as elsewhere in this package.

@@ -5,7 +5,12 @@ All notable changes to this reproducibility package.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versions track the CAC Plus engine release they reproduce, suffixed `-repro`.
 
-## [Unreleased] — NLST data citation and licence (2026-11-05)
+## [v2.5.2-repro.12] — NLST data citation and licence (2026-11-13)
+
+Documentation-only release so that the tag cited by the manuscript carries the NLST data
+citation. No code, data or expected result differs from `v2.5.2-repro.11`; `scripts/reproduce_all.py`
+output is unchanged. Developer tooling also changed since repro.11 (the PHI pre-commit hook under
+`.githooks/` was synced from its single-source core); it is not part of the reproducibility checks.
 
 ### Fixed
 
